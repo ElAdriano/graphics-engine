@@ -66,39 +66,46 @@ namespace VirtualCamera
 
             var transformMatrix = worldMatrix * viewMatrix * projectionMatrix;
 
-            List<Vector2> CubeVertices = new List<Vector2>();
-            for (int i = 0; i < obj.Vertices.Length; i++)
+            Dictionary<string, Vector2> renderedVertices = new Dictionary<string, Vector2>();
+            foreach(Wall wall in obj.Walls)
             {
-                var vertex = obj.Vertices[i];
-
-                Vector3 targetVector = camera.Target - camera.Position;
-                Vector3 objectVector = vertex - camera.Position;
-
-                double scalarValue = targetVector.X * objectVector.X + targetVector.Y * objectVector.Y + targetVector.Z * objectVector.Z;
-                double targetVectorLength = Math.Sqrt(Math.Pow(targetVector.X, 2) + Math.Pow(targetVector.Y, 2) + Math.Pow(targetVector.Z, 2));
-                double objectVectorLength = Math.Sqrt(Math.Pow(objectVector.X, 2) + Math.Pow(objectVector.Y, 2) + Math.Pow(objectVector.Z, 2));
-                double angle = Math.Acos(scalarValue / (targetVectorLength * objectVectorLength));
-                if (angle < Math.PI/3) // ograniczenie widoku do 60 stopni
+                foreach(Vector3 vertex in wall.Vertices)
                 {
-                    var calculatedPoint = CastTo2D(vertex, transformMatrix, camera);
-                    RenderPoint(calculatedPoint, camera);
-                    CubeVertices.Add(calculatedPoint);
-                }
-                else
-                {
-                    CubeVertices.Add(new Vector2(-1,-1));
+                    Vector3 targetVector = camera.Target - camera.Position;
+                    Vector3 objectVector = vertex - camera.Position;
+
+                    double scalarValue = targetVector.X * objectVector.X + targetVector.Y * objectVector.Y + targetVector.Z * objectVector.Z;
+                    double targetVectorLength = Math.Sqrt(Math.Pow(targetVector.X, 2) + Math.Pow(targetVector.Y, 2) + Math.Pow(targetVector.Z, 2));
+                    double objectVectorLength = Math.Sqrt(Math.Pow(objectVector.X, 2) + Math.Pow(objectVector.Y, 2) + Math.Pow(objectVector.Z, 2));
+                    double angle = Math.Acos(scalarValue / (targetVectorLength * objectVectorLength));
+
+                    if (angle > Math.PI / 3 && !renderedVertices.ContainsKey(vertex.ToString()) ) // ograniczenie widoku do 60 stopni
+                    {
+                        var calculatedPoint = CastTo2D(vertex, transformMatrix, camera);
+                        RenderPoint(calculatedPoint, camera);
+                        renderedVertices.Add(vertex.ToString(), calculatedPoint);
+                    }
                 }
             }
 
-            Vector2 point1, point2;
-            foreach (var connection in obj.ConnectedPoints)
+            string vertex1Id, vertex2Id;
+            foreach (Wall wall in obj.Walls)
             {
-                point1 = CubeVertices[(int)connection.X];
-                point2 = CubeVertices[(int)connection.Y];
-
-                if (point1.X != -1 && point2.X != -1 && point1.Y != -1 && point2.Y != -1)
+                for(int i = 0; i < wall.Vertices.Count - 1; i++)
                 {
-                    RenderLineBetweenPoints(point1, point2, camera);
+                    vertex1Id = wall.Vertices[i].ToString();
+                    vertex2Id = wall.Vertices[i + 1].ToString();
+                    if (renderedVertices.ContainsKey(vertex1Id) && renderedVertices.ContainsKey(vertex2Id))
+                    {
+                        RenderLineBetweenPoints(renderedVertices[vertex1Id], renderedVertices[vertex2Id], camera);
+                    }
+                }
+
+                vertex1Id = wall.Vertices[wall.Vertices.Count - 1].ToString();
+                vertex2Id = wall.Vertices[0].ToString();
+                if (renderedVertices.ContainsKey(vertex1Id) && renderedVertices.ContainsKey(vertex2Id))
+                {
+                    RenderLineBetweenPoints(renderedVertices[vertex1Id], renderedVertices[vertex2Id], camera);
                 }
             }
         }

@@ -102,10 +102,13 @@ namespace VirtualCamera
             {
                 foreach(var obj in objects)
                 {
-                    obj.Position = new Vector3(obj.Position.X, obj.Position.Y + 0.05f, obj.Position.Z);
-                    for(int i = 0; i < obj.Vertices.Length; i++)
+                    obj.Position = new Vector3(obj.Position.X, obj.Position.Y - 0.05f, obj.Position.Z);
+                    for(int i = 0; i < obj.Walls.Count; i++)
                     {
-                        obj.Vertices[i] = new Vector3(obj.Vertices[i].X, obj.Vertices[i].Y + 0.05f, obj.Vertices[i].Z);
+                        for (int j = 0; j < obj.Walls[i].Vertices.Count; j++)
+                        {
+                            obj.Walls[i].Vertices[j] = new Vector3(obj.Walls[i].Vertices[j].X, obj.Walls[i].Vertices[j].Y - 0.05f, obj.Walls[i].Vertices[j].Z);
+                        }
                     }
                 }
             }
@@ -114,10 +117,13 @@ namespace VirtualCamera
             {
                 foreach (var obj in objects)
                 {
-                    obj.Position = new Vector3(obj.Position.X, obj.Position.Y - 0.05f, obj.Position.Z);
-                    for (int i = 0; i < obj.Vertices.Length; i++)
+                    obj.Position = new Vector3(obj.Position.X, obj.Position.Y + 0.05f, obj.Position.Z);
+                    for (int i = 0; i < obj.Walls.Count; i++)
                     {
-                        obj.Vertices[i] = new Vector3(obj.Vertices[i].X, obj.Vertices[i].Y - 0.05f, obj.Vertices[i].Z);
+                        for (int j = 0; j < obj.Walls[i].Vertices.Count; j++)
+                        {
+                            obj.Walls[i].Vertices[j] = new Vector3(obj.Walls[i].Vertices[j].X, obj.Walls[i].Vertices[j].Y + 0.05f, obj.Walls[i].Vertices[j].Z);
+                        }
                     }
                 }
             }
@@ -126,10 +132,13 @@ namespace VirtualCamera
             {
                 foreach (var obj in objects)
                 {
-                    obj.Position = new Vector3(obj.Position.X - 0.05f, obj.Position.Y, obj.Position.Z);
-                    for (int i = 0; i < obj.Vertices.Length; i++)
+                    obj.Position = new Vector3(obj.Position.X + 0.05f, obj.Position.Y, obj.Position.Z);
+                    for (int i = 0; i < obj.Walls.Count; i++)
                     {
-                        obj.Vertices[i] = new Vector3(obj.Vertices[i].X - 0.05f, obj.Vertices[i].Y, obj.Vertices[i].Z);
+                        for (int j = 0; j < obj.Walls[i].Vertices.Count; j++)
+                        {
+                            obj.Walls[i].Vertices[j] = new Vector3(obj.Walls[i].Vertices[j].X + 0.05f, obj.Walls[i].Vertices[j].Y, obj.Walls[i].Vertices[j].Z);
+                        }
                     }
                 }
             }
@@ -138,10 +147,13 @@ namespace VirtualCamera
             {
                 foreach (var obj in objects)
                 {
-                    obj.Position = new Vector3(obj.Position.X + 0.05f, obj.Position.Y, obj.Position.Z);
-                    for (int i = 0; i < obj.Vertices.Length; i++)
+                    obj.Position = new Vector3(obj.Position.X - 0.05f, obj.Position.Y, obj.Position.Z);
+                    for (int i = 0; i < obj.Walls.Count; i++)
                     {
-                        obj.Vertices[i] = new Vector3(obj.Vertices[i].X + 0.05f, obj.Vertices[i].Y, obj.Vertices[i].Z);
+                        for (int j = 0; j < obj.Walls[i].Vertices.Count; j++)
+                        {
+                            obj.Walls[i].Vertices[j] = new Vector3(obj.Walls[i].Vertices[j].X - 0.05f, obj.Walls[i].Vertices[j].Y, obj.Walls[i].Vertices[j].Z);
+                        }
                     }
                 }
             } 
@@ -150,10 +162,13 @@ namespace VirtualCamera
             {
                 foreach (var obj in objects)
                 {
-                    obj.Position = new Vector3(obj.Position.X, obj.Position.Y, obj.Position.Z - 0.05f);
-                    for (int i = 0; i < obj.Vertices.Length; i++)
+                    obj.Position = new Vector3(obj.Position.X, obj.Position.Y, obj.Position.Z + 0.05f);
+                    for (int i = 0; i < obj.Walls.Count; i++)
                     {
-                        obj.Vertices[i] = new Vector3(obj.Vertices[i].X, obj.Vertices[i].Y, obj.Vertices[i].Z - 0.05f);
+                        for (int j = 0; j < obj.Walls[i].Vertices.Count; j++)
+                        {
+                            obj.Walls[i].Vertices[j] = new Vector3(obj.Walls[i].Vertices[j].X, obj.Walls[i].Vertices[j].Y, obj.Walls[i].Vertices[j].Z + 0.05f);
+                        }
                     }
                 }
             }
@@ -162,10 +177,13 @@ namespace VirtualCamera
             {
                 foreach (var obj in objects)
                 {
-                    obj.Position = new Vector3(obj.Position.X, obj.Position.Y, obj.Position.Z + 0.05f);
-                    for (int i = 0; i < obj.Vertices.Length; i++)
+                    obj.Position = new Vector3(obj.Position.X, obj.Position.Y, obj.Position.Z - 0.05f);
+                    for (int i = 0; i < obj.Walls.Count; i++)
                     {
-                        obj.Vertices[i] = new Vector3(obj.Vertices[i].X, obj.Vertices[i].Y, obj.Vertices[i].Z + 0.05f);
+                        for (int j = 0; j < obj.Walls[i].Vertices.Count; j++)
+                        {
+                            obj.Walls[i].Vertices[j] = new Vector3(obj.Walls[i].Vertices[j].X, obj.Walls[i].Vertices[j].Y, obj.Walls[i].Vertices[j].Z - 0.05f);
+                        }
                     }
                 }
             }
@@ -196,9 +214,12 @@ namespace VirtualCamera
                     foreach (var obj in objects)
                     {
                         obj.Position = Vector3.TransformCoordinate(obj.Position, XAxisRotationMatrix);
-                        for (int i = 0; i < obj.Vertices.Length; i++)
+                        for (int i = 0; i < obj.Walls.Count; i++)
                         {
-                            obj.Vertices[i] = Vector3.TransformCoordinate(obj.Vertices[i], XAxisRotationMatrix);
+                            for(int j = 0; j < obj.Walls[i].Vertices.Count; j++)
+                            {
+                                obj.Walls[i].Vertices[j] = Vector3.TransformCoordinate(obj.Walls[i].Vertices[j], XAxisRotationMatrix);
+                            }
                         }
                     }
                 }
@@ -208,9 +229,12 @@ namespace VirtualCamera
                     foreach (var obj in objects)
                     {
                         obj.Position = Vector3.TransformCoordinate(obj.Position, XAxisRotationMatrix);
-                        for (int i = 0; i < obj.Vertices.Length; i++)
+                        for (int i = 0; i < obj.Walls.Count; i++)
                         {
-                            obj.Vertices[i] = Vector3.TransformCoordinate(obj.Vertices[i], XAxisRotationMatrix);
+                            for (int j = 0; j < obj.Walls[i].Vertices.Count; j++)
+                            {
+                                obj.Walls[i].Vertices[j] = Vector3.TransformCoordinate(obj.Walls[i].Vertices[j], XAxisRotationMatrix);
+                            }
                         }
                     }
                 }
@@ -224,9 +248,12 @@ namespace VirtualCamera
                     foreach (var obj in objects)
                     {
                         obj.Position = Vector3.TransformCoordinate(obj.Position, YAxisRotationMatrix);
-                        for (int i = 0; i < obj.Vertices.Length; i++)
+                        for (int i = 0; i < obj.Walls.Count; i++)
                         {
-                            obj.Vertices[i] = Vector3.TransformCoordinate(obj.Vertices[i], YAxisRotationMatrix);
+                            for (int j = 0; j < obj.Walls[i].Vertices.Count; j++)
+                            {
+                                obj.Walls[i].Vertices[j] = Vector3.TransformCoordinate(obj.Walls[i].Vertices[j], YAxisRotationMatrix);
+                            }
                         }
                     }
                 }
@@ -236,9 +263,12 @@ namespace VirtualCamera
                     foreach (var obj in objects)
                     {
                         obj.Position = Vector3.TransformCoordinate(obj.Position, YAxisRotationMatrix);
-                        for (int i = 0; i < obj.Vertices.Length; i++)
+                        for (int i = 0; i < obj.Walls.Count; i++)
                         {
-                            obj.Vertices[i] = Vector3.TransformCoordinate(obj.Vertices[i], YAxisRotationMatrix);
+                            for (int j = 0; j < obj.Walls[i].Vertices.Count; j++)
+                            {
+                                obj.Walls[i].Vertices[j] = Vector3.TransformCoordinate(obj.Walls[i].Vertices[j], YAxisRotationMatrix);
+                            }
                         }
                     }
                 }
@@ -252,9 +282,12 @@ namespace VirtualCamera
                     foreach (var obj in objects)
                     {
                         obj.Position = Vector3.TransformCoordinate(obj.Position, ZAxisRotationMatrix);
-                        for (int i = 0; i < obj.Vertices.Length; i++)
+                        for (int i = 0; i < obj.Walls.Count; i++)
                         {
-                            obj.Vertices[i] = Vector3.TransformCoordinate(obj.Vertices[i], ZAxisRotationMatrix);
+                            for (int j = 0; j < obj.Walls[i].Vertices.Count; j++)
+                            {
+                                obj.Walls[i].Vertices[j] = Vector3.TransformCoordinate(obj.Walls[i].Vertices[j], ZAxisRotationMatrix);
+                            }
                         }
                     }
                 }
@@ -264,9 +297,12 @@ namespace VirtualCamera
                     foreach (var obj in objects)
                     {
                         obj.Position = Vector3.TransformCoordinate(obj.Position, ZAxisRotationMatrix);
-                        for (int i = 0; i < obj.Vertices.Length; i++)
+                        for (int i = 0; i < obj.Walls.Count; i++)
                         {
-                            obj.Vertices[i] = Vector3.TransformCoordinate(obj.Vertices[i], ZAxisRotationMatrix);
+                            for (int j = 0; j < obj.Walls[i].Vertices.Count; j++)
+                            {
+                                obj.Walls[i].Vertices[j] = Vector3.TransformCoordinate(obj.Walls[i].Vertices[j], ZAxisRotationMatrix);
+                            }
                         }
                     }
                 }
