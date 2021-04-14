@@ -24,7 +24,13 @@ namespace VirtualCamera
 
             foreach(List<Vector3> WallVertices in Walls)
             {
-                this.Walls.Add( new Wall(WallVertices) );
+                try
+                {
+                    this.Walls.Add(new Wall(WallVertices));
+                } catch(Exception e)
+                {
+                    throw new Exception(e.Message);
+                }
             }
         }
     }
