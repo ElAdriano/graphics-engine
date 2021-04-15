@@ -27,6 +27,11 @@ namespace VirtualCamera
         public byte[] SceneCache;
         public SharpDX.Direct2D1.Bitmap SceneBuffer;
         private List<Object3D> objects;
+        public float AngleOfView;
+        public float FarClippingValue;
+        public float NearClippingValue;
+
+        public List<ScanPlane> PlanesList;
 
         public Camera()
         {
@@ -38,6 +43,9 @@ namespace VirtualCamera
 
             SceneCache = new byte[Width * Height * 4];
             Zoom = 1;
+            AngleOfView = 0.78f;
+            FarClippingValue = 1;
+            NearClippingValue = 0.01f;
 
             RenderTargetProperties renderTargetProperties = new RenderTargetProperties()
             {
@@ -59,6 +67,32 @@ namespace VirtualCamera
             SceneBuffer = new SharpDX.Direct2D1.Bitmap(CameraView, new SharpDX.Size2(Width, Height), new SharpDX.Direct2D1.BitmapProperties(CameraView.PixelFormat));
 
             objects = new List<Object3D>();
+            CreatePlanes();
+        }
+
+        private void CreatePlanes()
+        {
+            // plaszczyzny w przestrzeni perspektywy
+            PlanesList = new List<ScanPlane>();
+            List<Vector3> tmpList;
+
+            float VerticalAngle = 0.5f * AngleOfView;
+            float ctg = (float)Width / Height;
+            float HorizontalAngle = (AngleOfView * ctg) / 2; // to verify
+
+            float VStep = AngleOfView / Height;
+
+            for (int i = 0; i < Height; i++)
+            {
+                tmpList = new List<Vector3>();
+                tmpList.Add(Position);
+
+                float yAngle = VerticalAngle - i * VStep;
+                tmpList.Add(new Vector3(FarClippingValue * (float)Math.Tan(a: -HorizontalAngle), FarClippingValue * (float)Math.Sin(yAngle), FarClippingValue * (float)Math.Cos(yAngle)));
+                tmpList.Add(new Vector3(FarClippingValue * (float)Math.Tan(a: HorizontalAngle), FarClippingValue * (float)Math.Sin(yAngle), FarClippingValue * (float)Math.Cos(yAngle)));
+                
+                PlanesList.Add(new ScanPlane(tmpList));
+            }
         }
 
         public void AddObject(Object3D obj)
@@ -79,9 +113,10 @@ namespace VirtualCamera
 
         private void Draw()
         {
-            for(int i = 0; i < objects.Count; i++)
+            Converter.Render(objects, this);
+            foreach(ScanPlane scanline in PlanesList)
             {
-                Converter.Render(objects[i], this);
+                // W razie czego 
             }
 
             SceneBuffer.CopyFromMemory(SceneCache, 4 * Width);

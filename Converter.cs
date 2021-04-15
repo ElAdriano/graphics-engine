@@ -58,37 +58,52 @@ namespace VirtualCamera
             }
         }
 
-        public static void Render(Object3D obj, Camera camera)
+        public static List<Object3D> Render(List<Object3D> objects, Camera camera)
         {
-            var worldMatrix = Matrix.Translation(obj.Position) * Matrix.RotationYawPitchRoll(obj.Rotation.X, obj.Rotation.Y, obj.Rotation.Z);
-            var viewMatrix = Matrix.LookAtLH(camera.Position, camera.Target, Vector3.UnitY);
-            var projectionMatrix = Matrix.PerspectiveFovRH(0.78f, (float)Camera.Width / Camera.Height, 0.01f, 1.0f);
-
-            var transformMatrix = worldMatrix * viewMatrix * projectionMatrix;
-
-            Dictionary<string, Vector2> renderedVertices = new Dictionary<string, Vector2>();
-            foreach(Wall wall in obj.Walls)
+            List<Object3D> newObjects = new List<Object3D>();
+            foreach(var obj in objects)
             {
-                foreach(Vector3 vertex in wall.Vertices)
+                var worldMatrix = Matrix.Translation(obj.Position) * Matrix.RotationYawPitchRoll(obj.Rotation.X, obj.Rotation.Y, obj.Rotation.Z);
+                var viewMatrix = Matrix.LookAtLH(camera.Position, camera.Target, Vector3.UnitY);
+                var projectionMatrix = Matrix.PerspectiveFovRH(camera.AngleOfView, (float)Camera.Width / Camera.Height, camera.NearClippingValue, camera.FarClippingValue);
+
+                var transformMatrix = worldMatrix * viewMatrix; // * projectionMatrix;
+
+                //Dictionary<string, Vector2> renderedVertices = new Dictionary<string, Vector2>();
+                List<Wall> newWalls = new List<Wall>();
+                foreach (Wall wall in obj.Walls)
                 {
-                    Vector3 targetVector = camera.Target - camera.Position;
-                    Vector3 objectVector = vertex - camera.Position;
-
-                    double scalarValue = targetVector.X * objectVector.X + targetVector.Y * objectVector.Y + targetVector.Z * objectVector.Z;
-                    double targetVectorLength = Math.Sqrt(Math.Pow(targetVector.X, 2) + Math.Pow(targetVector.Y, 2) + Math.Pow(targetVector.Z, 2));
-                    double objectVectorLength = Math.Sqrt(Math.Pow(objectVector.X, 2) + Math.Pow(objectVector.Y, 2) + Math.Pow(objectVector.Z, 2));
-                    double angle = Math.Acos(scalarValue / (targetVectorLength * objectVectorLength));
-
-                    if (angle > Math.PI / 3 && !renderedVertices.ContainsKey(vertex.ToString()) ) // ograniczenie widoku do 60 stopni
+                    List<Vector3> newVertices = new List<Vector3>();
+                    foreach (Vector3 vertex in wall.Vertices)
                     {
-                        var calculatedPoint = CastTo2D(vertex, transformMatrix, camera);
-                        RenderPoint(calculatedPoint, camera);
-                        renderedVertices.Add(vertex.ToString(), calculatedPoint);
+                        Vector3 targetVector = camera.Target - camera.Position;
+                        Vector3 objectVector = vertex - camera.Position;
+
+                        //double scalarValue = targetVector.X * objectVector.X + targetVector.Y * objectVector.Y + targetVector.Z * objectVector.Z;
+                        //double targetVectorLength = Math.Sqrt(Math.Pow(targetVector.X, 2) + Math.Pow(targetVector.Y, 2) + Math.Pow(targetVector.Z, 2));
+                        //double objectVectorLength = Math.Sqrt(Math.Pow(objectVector.X, 2) + Math.Pow(objectVector.Y, 2) + Math.Pow(objectVector.Z, 2));
+                        //double angle = Math.Acos(scalarValue / (targetVectorLength * objectVectorLength));
+                        newVertices.Add(Vector3.TransformCoordinate(vertex, transformMatrix));
+                        //tutaj można zaczac zrownoleglanie jeslibedzie dzialac jak gowno     
+
+                        /*  if (angle > Math.PI / 3 && !renderedVertices.ContainsKey(vertex.ToString()) ) // ograniczenie widoku do 60 stopni
+                          {
+                              var calculatedPoint = CastTo2D(vertex, transformMatrix, camera);
+                              RenderPoint(calculatedPoint, camera);
+                              renderedVertices.Add(vertex.ToString(), calculatedPoint);
+                          }
+                        */
                     }
+                    newWalls.Add(new Wall(newVertices));
                 }
+                newObjects.Add(new Object3D(obj.Name, Vector3.TransformCoordinate(obj.Position, transformMatrix), newWalls));
             }
 
-            string vertex1Id, vertex2Id;
+            return newObjects;
+            
+ 
+
+            /*string vertex1Id, vertex2Id;
             foreach (Wall wall in obj.Walls)
             {
                 for(int i = 0; i < wall.Vertices.Count - 1; i++)
@@ -107,7 +122,7 @@ namespace VirtualCamera
                 {
                     RenderLineBetweenPoints(renderedVertices[vertex1Id], renderedVertices[vertex2Id], camera);
                 }
-            }
+            }*/
         }
     }
 }

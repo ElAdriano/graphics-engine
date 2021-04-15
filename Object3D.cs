@@ -33,5 +33,13 @@ namespace VirtualCamera
                 }
             }
         }
+
+        public Object3D(string name, Vector3 Position, List<Wall> Walls)
+        {
+            this.Name = name;
+            this.Position = Position;
+            Rotation = new Vector3(0, 0, 0);
+            this.Walls = Walls;
+        }
     }
 }
