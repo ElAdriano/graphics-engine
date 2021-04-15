@@ -82,14 +82,18 @@ namespace VirtualCamera
 
             float VStep = AngleOfView / Height;
 
+            float screenHeightInPerspective = 1.0f;
+            float HighestRow = screenHeightInPerspective*0.5f;
+            float spaceBeetwen = 1.0f / Height;
+
             for (int i = 0; i < Height; i++)
             {
                 tmpList = new List<Vector3>();
-                tmpList.Add(Position);
+                tmpList.Add(new Vector3(0, HighestRow - i * spaceBeetwen, 0));
 
                 float yAngle = VerticalAngle - i * VStep;
-                tmpList.Add(new Vector3(FarClippingValue * (float)Math.Tan(a: -HorizontalAngle), FarClippingValue * (float)Math.Sin(yAngle), FarClippingValue * (float)Math.Cos(yAngle)));
-                tmpList.Add(new Vector3(FarClippingValue * (float)Math.Tan(a: HorizontalAngle), FarClippingValue * (float)Math.Sin(yAngle), FarClippingValue * (float)Math.Cos(yAngle)));
+                tmpList.Add(new Vector3(FarClippingValue * (float)Math.Tan( -HorizontalAngle), HighestRow - i * spaceBeetwen , FarClippingValue));
+                tmpList.Add(new Vector3(FarClippingValue * (float)Math.Tan( HorizontalAngle), HighestRow - i * spaceBeetwen, FarClippingValue));
                 
                 PlanesList.Add(new ScanPlane(tmpList));
             }
@@ -116,7 +120,7 @@ namespace VirtualCamera
             Converter.Render(objects, this);
             foreach(ScanPlane scanline in PlanesList)
             {
-                // W razie czego 
+                // TO-DOpunktyu przeciecia wykres rysowanie
             }
 
             SceneBuffer.CopyFromMemory(SceneCache, 4 * Width);

@@ -67,7 +67,7 @@ namespace VirtualCamera
                 var viewMatrix = Matrix.LookAtLH(camera.Position, camera.Target, Vector3.UnitY);
                 var projectionMatrix = Matrix.PerspectiveFovRH(camera.AngleOfView, (float)Camera.Width / Camera.Height, camera.NearClippingValue, camera.FarClippingValue);
 
-                var transformMatrix = worldMatrix * viewMatrix; // * projectionMatrix;
+                var transformMatrix = worldMatrix * viewMatrix * projectionMatrix;
 
                 //Dictionary<string, Vector2> renderedVertices = new Dictionary<string, Vector2>();
                 List<Wall> newWalls = new List<Wall>();
