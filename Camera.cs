@@ -82,7 +82,7 @@ namespace VirtualCamera
             HorizontalAngle = (AngleOfView * ctg) / 2;
 
             VerticalViewRange = 10;
-            HorizontalViewRange = ctg * VerticalAngle;
+            HorizontalViewRange = ctg * VerticalViewRange;
 
             CreatePlanes();
         }
@@ -123,7 +123,7 @@ namespace VirtualCamera
             }
         }
 
-        private List<Tuple<int, int, Vector2>> FindIntersections(ScanPlane plane, List<Object3D> objects)
+        public List<Tuple<int, int, Vector2>> FindIntersections(ScanPlane plane, List<Object3D> objects)
         {
             List<Tuple<int, int, Vector2>> intersections = new List<Tuple<int, int, Vector2>>();
             for (int objIdx = 0; objIdx < objects.Count; objIdx++)
@@ -136,12 +136,40 @@ namespace VirtualCamera
 
                     foreach(LineEquation eq in list)
                     {
-                        float numerator = -(plane.SurfaceCoefficients[0] * eq.StartPoint.X + plane.SurfaceCoefficients[1] * eq.StartPoint.Y + plane.SurfaceCoefficients[2] * eq.StartPoint.Z + plane.SurfaceCoefficients[3]);
-                        float denominator = plane.SurfaceCoefficients[0] * eq.Deltas.X + plane.SurfaceCoefficients[1] * eq.Deltas.Y + plane.SurfaceCoefficients[2] * eq.Deltas.Z;
-                        float t = numerator / denominator;
+                        if(eq.Deltas.Y == 0)
+                        {
+                            if (eq.StartPoint.Y == plane.YValue)
+                            {
+                                Vector2 point = new Vector2(eq.StartPoint.X, eq.StartPoint.Z);
+                                intersections.Add(new Tuple<int, int, Vector2>(objIdx, w, point));
+                                point = new Vector2(eq.StartPoint.X + eq.Deltas.X, eq.StartPoint.Z + eq.Deltas.Z);
+                                intersections.Add(new Tuple<int, int, Vector2>(objIdx, w, point));
+                            }
+                            else
+                            {
+                                continue;
+                            }
+                        }
+                        else
+                        {
+                            float numerator = -(plane.SurfaceCoefficients[3] + plane.SurfaceCoefficients[1] * eq.StartPoint.Y);//-(plane.SurfaceCoefficients[0] * eq.StartPoint.X + plane.SurfaceCoefficients[1] * eq.StartPoint.Y + plane.SurfaceCoefficients[2] * eq.StartPoint.Z + plane.SurfaceCoefficients[3]);
+                            float denominator = plane.SurfaceCoefficients[1] * eq.Deltas.Y;// plaszczyzny sa tylko rownolegle do pl. XoZ, wiec A i C = 0
+                                                                                           //plane.SurfaceCoefficients[0] * eq.Deltas.X + plane.SurfaceCoefficients[1] * eq.Deltas.Y + plane.SurfaceCoefficients[2] * eq.Deltas.Z;
+                            float t = numerator / denominator;
 
-                        Vector2 point = new Vector2(eq.StartPoint.X + eq.Deltas.X * t, eq.StartPoint.Z + eq.Deltas.Z * t);
-                        intersections.Add(new Tuple<int, int, Vector2>(objIdx, w, point));
+                            Console.WriteLine("\n\n\n");
+                            Console.WriteLine(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
+
+                            Console.WriteLine("t = {0}, numerator = {1}, denominator = {2}", t, numerator, denominator);
+
+                            Console.WriteLine("Surface coefficients : A = {0}, B = {1}, C = {2}, D = {3}", plane.SurfaceCoefficients[0], plane.SurfaceCoefficients[1], plane.SurfaceCoefficients[2], plane.SurfaceCoefficients[3]);
+
+                            Console.WriteLine("eq startPoint = " + eq.StartPoint.ToString());
+                            Console.WriteLine("eq deltas = " + eq.Deltas.ToString());
+                            Vector2 point = new Vector2(eq.StartPoint.X + eq.Deltas.X * t, eq.StartPoint.Z + eq.Deltas.Z * t);
+                            Console.WriteLine("point = " + point.ToString());
+                            intersections.Add(new Tuple<int, int, Vector2>(objIdx, w, point));
+                        }
                     }
                     /*
                      * for (int i = 0; i < intersections.Count; i++)
@@ -166,7 +194,7 @@ namespace VirtualCamera
             return intersections;
         }
         
-        private Tuple<List<Tuple<int, int, Vector2>>, List<Tuple<int, int, Vector2>>> FilterSinglePoints(List<Tuple<int, int, Vector2>> intersections)
+        public Tuple<List<Tuple<int, int, Vector2>>, List<Tuple<int, int, Vector2>>> FilterSinglePoints(List<Tuple<int, int, Vector2>> intersections)
         {
             Dictionary<string, int> objectsAndWallsMap = new Dictionary<string, int>();
 
@@ -200,7 +228,7 @@ namespace VirtualCamera
             return new Tuple<List<Tuple<int, int, Vector2>>, List<Tuple<int, int, Vector2>>>(filteredPoints, restIntersections);
         }
 
-        private List<Tuple<int, int, Vector2, Tuple<float, float>>> CalculateLines(List<Tuple<int, int, Vector2>> restIntersections, ref List<Tuple<int, int, Vector2>> singlePoints) // wyliczanie linii tworzonych przez punkty przeciecia
+        public List<Tuple<int, int, Vector2, Tuple<float, float>>> CalculateLines(List<Tuple<int, int, Vector2>> restIntersections, ref List<Tuple<int, int, Vector2>> singlePoints) // wyliczanie linii tworzonych przez punkty przeciecia
         {
             List<Tuple<int, int, Vector2, Tuple<float, float>>> lines = new List<Tuple<int, int, Vector2, Tuple<float, float>>>();
             for(int i = 0; i < restIntersections.Count - 1; i++)
@@ -237,7 +265,7 @@ namespace VirtualCamera
             return lines;
         }
 
-        private SharpDX.Color GetPixelColor(float horizontalValue, List<Tuple<int, int, Vector2, Tuple<float, float>>> lines, List<Tuple<int, int, Vector2>> singlePoints)
+        public SharpDX.Color GetPixelColor(float horizontalValue, List<Tuple<int, int, Vector2, Tuple<float, float>>> lines, List<Tuple<int, int, Vector2>> singlePoints)
         {
             Dictionary<string, int> dict = new Dictionary<string, int>();
 
@@ -275,22 +303,23 @@ namespace VirtualCamera
             {
                 ScanPlane scanline = PlanesList[scanlineNumber];
                 List<Tuple<int, int, Vector2>> intersections = FindIntersections(scanline, objects);
+
+                //Console.WriteLine("Intersection value -> z(x): x = {0}, z = {1}", intersections[0].Item3.X, intersections[0].Item3.Y);
                 Tuple<List<Tuple<int, int, Vector2>>, List<Tuple<int, int, Vector2>>> filtrationResults = FilterSinglePoints(intersections);
 
                 List<Tuple<int, int, Vector2>> singlePoints = filtrationResults.Item1;
                 List<Tuple<int, int, Vector2, Tuple<float, float>>> lines = CalculateLines(filtrationResults.Item2, ref singlePoints); // filtrationResults.Item2 - rest intersections
 
-                List<SharpDX.Color> colors = new List<SharpDX.Color>();
-
                 float mostLeft = -0.5f * HorizontalViewRange;
                 float step = HorizontalViewRange / Width;
 
-                for(int x = 0; x < Width; x++)
+                for (int x = 0; x < Width; x++)
                 {
                     SharpDX.Color color = GetPixelColor(mostLeft + x * step, lines, singlePoints);
-                    Converter.UpdatePixelValue(x, scanlineNumber, color.R, color.G, color.B, color.A, this);
+                    //Console.WriteLine("Dla piksela ({0}, {1}) jest kolor: {2}", x, scanlineNumber, color.ToString());
+
+                    Converter.UpdatePixelValue(x, scanlineNumber, (byte)(255 * color.R), (byte)(255 * color.G), (byte)(255 * color.B), (byte)(255 * color.A), this);
                 }
-                // TO-DOpunktyu przeciecia wykres rysowanie
             }
 
             SceneBuffer.CopyFromMemory(SceneCache, 4 * Width);

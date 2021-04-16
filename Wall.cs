@@ -29,6 +29,9 @@ namespace VirtualCamera
                 pointer = Vertices[i];
                 tmp = Vertices[(i + 1) % Vertices.Count];
 
+                //Console.WriteLine(pointer.ToString());
+                //Console.WriteLine(tmp.ToString());
+
                 Vector3 diffV = pointer - tmp;
                 Equations.Add(new LineEquation(pointer, diffV));
             }

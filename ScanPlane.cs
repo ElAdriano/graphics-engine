@@ -10,6 +10,7 @@ namespace VirtualCamera
     public class ScanPlane
     {
         public float[] SurfaceCoefficients;
+        public float YValue;
 
         public ScanPlane(List<Vector3> Vertices)
         {
@@ -23,6 +24,7 @@ namespace VirtualCamera
         public void FindSurface(List<Vector3> Vertices)
         {
             SurfaceCoefficients = new float[4];
+            YValue = Vertices[0].Y;
             Vector3 FirstVector = Vertices[0] - Vertices[1];
             Vector3 SecondVector;
             bool NonLinearVectorsFound = false;
