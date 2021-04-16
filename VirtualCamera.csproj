@@ -71,6 +71,8 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="LineEquation.cs" />
+    <Compile Include="ScanPlane.cs" />
     <Compile Include="Converter.cs" />
     <Compile Include="Object3D.cs" />
     <Compile Include="ObjectsListFile.cs" />

@@ -11,6 +11,7 @@ namespace VirtualCamera
     {
         public string Name;
         public Vector3 Position;
+        public SharpDX.Color Color;
         public List<List<Vector3>> Walls;
     }
 

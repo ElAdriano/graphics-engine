@@ -12,8 +12,8 @@ namespace VirtualCamera
     {
         private RenderForm renderForm;
 
-        public const int Width = 640;
-        public const int Height = 480;
+        public const int Width = 256;
+        public const int Height = 144;
 
         public WindowRenderTarget CameraView;
         public Vector3 Position;
@@ -30,6 +30,13 @@ namespace VirtualCamera
         public float AngleOfView;
         public float FarClippingValue;
         public float NearClippingValue;
+        public float screenHeightInPerspective;
+        public float HighestRow;
+        public float VerticalAngle;
+        public float HorizontalAngle;
+
+        public float HorizontalViewRange;
+        public float VerticalViewRange;
 
         public List<ScanPlane> PlanesList;
 
@@ -67,6 +74,16 @@ namespace VirtualCamera
             SceneBuffer = new SharpDX.Direct2D1.Bitmap(CameraView, new SharpDX.Size2(Width, Height), new SharpDX.Direct2D1.BitmapProperties(CameraView.PixelFormat));
 
             objects = new List<Object3D>();
+            screenHeightInPerspective = 1.0f;
+            HighestRow = screenHeightInPerspective * 0.5f;
+
+            VerticalAngle = 0.5f * AngleOfView;
+            float ctg = (float)Width / Height;
+            HorizontalAngle = (AngleOfView * ctg) / 2;
+
+            VerticalViewRange = 10;
+            HorizontalViewRange = ctg * VerticalAngle;
+
             CreatePlanes();
         }
 
@@ -76,24 +93,15 @@ namespace VirtualCamera
             PlanesList = new List<ScanPlane>();
             List<Vector3> tmpList;
 
-            float VerticalAngle = 0.5f * AngleOfView;
-            float ctg = (float)Width / Height;
-            float HorizontalAngle = (AngleOfView * ctg) / 2; // to verify
-
-            float VStep = AngleOfView / Height;
-
-            float screenHeightInPerspective = 1.0f;
-            float HighestRow = screenHeightInPerspective*0.5f;
-            float spaceBeetwen = 1.0f / Height;
+            float spaceBetween = VerticalViewRange / Height;
 
             for (int i = 0; i < Height; i++)
             {
                 tmpList = new List<Vector3>();
-                tmpList.Add(new Vector3(0, HighestRow - i * spaceBeetwen, 0));
+                tmpList.Add(new Vector3(0, HighestRow - i * spaceBetween, 0));
 
-                float yAngle = VerticalAngle - i * VStep;
-                tmpList.Add(new Vector3(FarClippingValue * (float)Math.Tan( -HorizontalAngle), HighestRow - i * spaceBeetwen , FarClippingValue));
-                tmpList.Add(new Vector3(FarClippingValue * (float)Math.Tan( HorizontalAngle), HighestRow - i * spaceBeetwen, FarClippingValue));
+                tmpList.Add(new Vector3(FarClippingValue * (float)Math.Tan( -HorizontalAngle), HighestRow - i * spaceBetween , FarClippingValue));
+                tmpList.Add(new Vector3(FarClippingValue * (float)Math.Tan( HorizontalAngle), HighestRow - i * spaceBetween, FarClippingValue));
                 
                 PlanesList.Add(new ScanPlane(tmpList));
             }
@@ -115,11 +123,173 @@ namespace VirtualCamera
             }
         }
 
+        private List<Tuple<int, int, Vector2>> FindIntersections(ScanPlane plane, List<Object3D> objects)
+        {
+            List<Tuple<int, int, Vector2>> intersections = new List<Tuple<int, int, Vector2>>();
+            for (int objIdx = 0; objIdx < objects.Count; objIdx++)
+            {
+                Object3D obj = objects[objIdx];
+                for(int w = 0; w < obj.Walls.Count; w++)
+                {
+                    Wall wall = obj.Walls[w];
+                    List<LineEquation> list = wall.CalculateEquationsForEdges();
+
+                    foreach(LineEquation eq in list)
+                    {
+                        float numerator = -(plane.SurfaceCoefficients[0] * eq.StartPoint.X + plane.SurfaceCoefficients[1] * eq.StartPoint.Y + plane.SurfaceCoefficients[2] * eq.StartPoint.Z + plane.SurfaceCoefficients[3]);
+                        float denominator = plane.SurfaceCoefficients[0] * eq.Deltas.X + plane.SurfaceCoefficients[1] * eq.Deltas.Y + plane.SurfaceCoefficients[2] * eq.Deltas.Z;
+                        float t = numerator / denominator;
+
+                        Vector2 point = new Vector2(eq.StartPoint.X + eq.Deltas.X * t, eq.StartPoint.Z + eq.Deltas.Z * t);
+                        intersections.Add(new Tuple<int, int, Vector2>(objIdx, w, point));
+                    }
+                    /*
+                     * for (int i = 0; i < intersections.Count; i++)
+                    {
+                        Vector2 point = intersections[i];
+                        for(int j = 0; j < wall.Vertices.Count; j++)
+                        {
+                            Vector3 vertex = wall.Vertices[j];
+                            if (vertex == new Vector3(point.X, plane.SurfaceCoefficients[3], point.Y))
+                            {
+                                if (wall.Vertices[(j + 1) % wall.Vertices.Count].Y == plane.SurfaceCoefficients[3] && )
+                                {
+                                    
+                                }
+                            }
+                        }
+                    }
+                    */
+                }
+            }
+            //intersections.Sort((x, y) => { return x.Item3.X < y.Item3.X ? -1 : 1; });
+            return intersections;
+        }
+        
+        private Tuple<List<Tuple<int, int, Vector2>>, List<Tuple<int, int, Vector2>>> FilterSinglePoints(List<Tuple<int, int, Vector2>> intersections)
+        {
+            Dictionary<string, int> objectsAndWallsMap = new Dictionary<string, int>();
+
+            foreach(Tuple<int, int, Vector2> element in intersections)
+            {
+                if (objectsAndWallsMap.ContainsKey(element.Item1.ToString() + "_" + element.Item2.ToString()))
+                {
+                    objectsAndWallsMap[element.Item1.ToString() + "_" + element.Item2.ToString()]++;
+                }
+                else
+                {
+                    objectsAndWallsMap[element.Item1.ToString() + "_" + element.Item2.ToString()] = 1;
+                }
+            }
+
+            List<Tuple<int, int, Vector2>> filteredPoints = new List<Tuple<int, int, Vector2>>();
+            List<Tuple<int, int, Vector2>> restIntersections = new List<Tuple<int, int, Vector2>>();
+
+            foreach(Tuple<int, int, Vector2> element in intersections)
+            {
+                if (objectsAndWallsMap[element.Item1.ToString() + "_" + element.Item2.ToString()] == 1)
+                {
+                    filteredPoints.Add(element);
+                }
+                else
+                {
+                    restIntersections.Add(element);
+                }
+            }
+
+            return new Tuple<List<Tuple<int, int, Vector2>>, List<Tuple<int, int, Vector2>>>(filteredPoints, restIntersections);
+        }
+
+        private List<Tuple<int, int, Vector2, Tuple<float, float>>> CalculateLines(List<Tuple<int, int, Vector2>> restIntersections, ref List<Tuple<int, int, Vector2>> singlePoints) // wyliczanie linii tworzonych przez punkty przeciecia
+        {
+            List<Tuple<int, int, Vector2, Tuple<float, float>>> lines = new List<Tuple<int, int, Vector2, Tuple<float, float>>>();
+            for(int i = 0; i < restIntersections.Count - 1; i++)
+            {
+                for(int j = i + 1; j < restIntersections.Count; j++)
+                {
+                    if(restIntersections[i].Item1 == restIntersections[j].Item1 && restIntersections[i].Item2 == restIntersections[j].Item2) // ten sam obiekt i sciana
+                    {
+                        Vector2 p1 = restIntersections[i].Item3, p2 = restIntersections[j].Item3;
+                        if (p1.Y < 0 && p2.Y < 0)
+                        {
+                            continue;
+                        }
+                        if (p1.X - p2.X == 0)
+                        {
+                            if (p1.Y >= 0 && p2.Y < 0 || p2.Y >= 0 && p1.Y < 0)
+                            {
+                                singlePoints.Add(new Tuple<int, int, Vector2>(restIntersections[i].Item1, restIntersections[i].Item2, new Vector2(p1.X, 0)));
+                            }
+                            if (p1.Y > 0 && p2.Y > 0)
+                            {
+                                singlePoints.Add(new Tuple<int, int, Vector2>(restIntersections[i].Item1, restIntersections[i].Item2, new Vector2(p1.X, Math.Min(p1.Y, p2.Y))));
+                            }
+                        }
+                        else
+                        {
+                            float coefficient_x = (p1.Y - p2.Y) / (p1.X - p2.X);
+                            float coefficient_y = (p1.Y - coefficient_x * p1.X);
+                            lines.Add(new Tuple<int, int, Vector2, Tuple<float,float>>(restIntersections[i].Item1, restIntersections[i].Item2, new Vector2(coefficient_x, coefficient_y), new Tuple<float,float>(p1.X, p2.X)));
+                        }
+                    }
+                }
+            }
+            return lines;
+        }
+
+        private SharpDX.Color GetPixelColor(float horizontalValue, List<Tuple<int, int, Vector2, Tuple<float, float>>> lines, List<Tuple<int, int, Vector2>> singlePoints)
+        {
+            Dictionary<string, int> dict = new Dictionary<string, int>();
+
+            SharpDX.Color returnedColor = new SharpDX.Color(0, 0, 0, 1f);
+            float minZ = float.MaxValue;
+            for(int i = 0; i < lines.Count; i++)
+            {
+                if (   lines[i].Item4.Item1 < horizontalValue && horizontalValue < lines[i].Item4.Item2 
+                    || lines[i].Item4.Item2 < horizontalValue && horizontalValue < lines[i].Item4.Item1 )
+                {
+                    float z = lines[i].Item3.X * horizontalValue + lines[i].Item3.Y;
+                    if (z < minZ)
+                    {
+                        minZ = z;
+                        returnedColor = objects[lines[i].Item1].Color;
+                    }
+                }
+            }
+
+            foreach (Tuple<int, int, Vector2> point in singlePoints)
+            {
+                if (point.Item3.Y < minZ)
+                {
+                    minZ = point.Item3.Y;
+                    returnedColor = objects[point.Item1].Color;
+                }
+            }
+            return returnedColor;
+        }
+
         private void Draw()
         {
             Converter.Render(objects, this);
-            foreach(ScanPlane scanline in PlanesList)
+            for(int scanlineNumber = 0; scanlineNumber < PlanesList.Count; scanlineNumber++)
             {
+                ScanPlane scanline = PlanesList[scanlineNumber];
+                List<Tuple<int, int, Vector2>> intersections = FindIntersections(scanline, objects);
+                Tuple<List<Tuple<int, int, Vector2>>, List<Tuple<int, int, Vector2>>> filtrationResults = FilterSinglePoints(intersections);
+
+                List<Tuple<int, int, Vector2>> singlePoints = filtrationResults.Item1;
+                List<Tuple<int, int, Vector2, Tuple<float, float>>> lines = CalculateLines(filtrationResults.Item2, ref singlePoints); // filtrationResults.Item2 - rest intersections
+
+                List<SharpDX.Color> colors = new List<SharpDX.Color>();
+
+                float mostLeft = -0.5f * HorizontalViewRange;
+                float step = HorizontalViewRange / Width;
+
+                for(int x = 0; x < Width; x++)
+                {
+                    SharpDX.Color color = GetPixelColor(mostLeft + x * step, lines, singlePoints);
+                    Converter.UpdatePixelValue(x, scanlineNumber, color.R, color.G, color.B, color.A, this);
+                }
                 // TO-DOpunktyu przeciecia wykres rysowanie
             }
 

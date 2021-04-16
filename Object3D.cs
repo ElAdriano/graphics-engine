@@ -15,12 +15,15 @@ namespace VirtualCamera
 
         public List<Wall> Walls;
 
-        public Object3D(string name, Vector3 Position, List<List<Vector3>> Walls)
+        public SharpDX.Color Color;
+
+        public Object3D(string name, Vector3 Position, List<List<Vector3>> Walls, Color color)
         {
             this.Name = name;
             this.Position = Position;
             Rotation = new Vector3(0, 0, 0);
             this.Walls = new List<Wall>();
+            this.Color = color;
 
             foreach(List<Vector3> WallVertices in Walls)
             {
@@ -34,12 +37,13 @@ namespace VirtualCamera
             }
         }
 
-        public Object3D(string name, Vector3 Position, List<Wall> Walls)
+        public Object3D(string name, Vector3 Position, List<Wall> Walls, Color Color)
         {
             this.Name = name;
             this.Position = Position;
             Rotation = new Vector3(0, 0, 0);
             this.Walls = Walls;
+            this.Color = Color;
         }
     }
 }

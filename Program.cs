@@ -33,7 +33,7 @@ namespace VirtualCamera
                 {
                     try
                     {
-                        newObj = new Object3D(obj.Name, obj.Position, obj.Walls);
+                        newObj = new Object3D(obj.Name, obj.Position, obj.Walls, obj.Color);
                         camera.AddObject(newObj);
                     }
                     catch(Exception e)
@@ -47,7 +47,7 @@ namespace VirtualCamera
             }
         }
 
-        static void DevTests(Vector3 v1, Vector3 v2, Vector3 v3)
+        /*static void DevTests(Vector3 v1, Vector3 v2, Vector3 v3)
         {
             List<Vector3> tmp = new List<Vector3>();
 
@@ -57,6 +57,6 @@ namespace VirtualCamera
             Wall wall = new Wall(tmp);
             wall.FindSurface();
             Console.WriteLine("Surface equation: {0}x {1}y {2}z {3}", wall.SurfaceCoefficients[0], wall.SurfaceCoefficients[1], wall.SurfaceCoefficients[2], wall.SurfaceCoefficients[3]);
-        }
+        }*/
     }
 }

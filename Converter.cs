@@ -96,7 +96,7 @@ namespace VirtualCamera
                     }
                     newWalls.Add(new Wall(newVertices));
                 }
-                newObjects.Add(new Object3D(obj.Name, Vector3.TransformCoordinate(obj.Position, transformMatrix), newWalls));
+                newObjects.Add(new Object3D(obj.Name, Vector3.TransformCoordinate(obj.Position, transformMatrix), newWalls, obj.Color));
             }
 
             return newObjects;
