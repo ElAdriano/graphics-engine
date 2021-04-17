@@ -11,19 +11,15 @@ namespace VirtualCamera
     public class Camera : IDisposable
     {
         private RenderForm renderForm;
-
         public const int Width = 480;//256;
         public const int Height = 360;//144;
-
         public WindowRenderTarget CameraView;
         public Vector3 Position;
         public Vector3 Target;
         public float Zoom;
-
         private Matrix XAxisRotationMatrix;
         private Matrix YAxisRotationMatrix;
         private Matrix ZAxisRotationMatrix;
-
         public byte[] SceneCache;
         public SharpDX.Direct2D1.Bitmap SceneBuffer;
         private List<Object3D> objects;
@@ -34,7 +30,6 @@ namespace VirtualCamera
         public float HighestRow;
         public float VerticalAngle;
         public float HorizontalAngle;
-
         public float HorizontalViewRange;
         public float VerticalViewRange;
 
@@ -156,181 +151,113 @@ namespace VirtualCamera
                             
                             float t = numerator / denominator;
 
-/*                          Console.WriteLine("\n\n\n");
-                            Console.WriteLine(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
-
-                            Console.WriteLine("t = {0}, numerator = {1}, denominator = {2}", t, numerator, denominator);
-
-                            Console.WriteLine("Surface coefficients : A = {0}, B = {1}, C = {2}, D = {3}", plane.SurfaceCoefficients[0], plane.SurfaceCoefficients[1], plane.SurfaceCoefficients[2], plane.SurfaceCoefficients[3]);
-
-                            Console.WriteLine("eq startPoint = " + eq.StartPoint.ToString());
-                            Console.WriteLine("eq deltas = " + eq.Deltas.ToString());
-*/
                             Vector2 point = new Vector2(eq.StartPoint.X + eq.Deltas.X * t, eq.StartPoint.Z + eq.Deltas.Z * t);
-                            //     Console.WriteLine("point = " + point.ToString());
-                            //NotImplementedException sprawdzam przypadków zerowych wiem.
-                            //Ograniczenie Z
-                            if (eq.Deltas.Z > 0)
-                            {
-                                if (eq.StartPoint.Z > point.Y && point.Y > eq.StartPoint.Z + eq.Deltas.Z)
-                                    continue;
-                            }
-                            else if (eq.Deltas.Z < 0)
-                            {
-                                if (eq.StartPoint.Z < point.Y && point.Y < eq.StartPoint.Z + eq.Deltas.Z)
-                                    continue;
-                            }
+                            intersections.Add(new Tuple<int, int, Vector2>(objIdx, w, point));
 
-                            // ograniczenie X
-                            if (eq.Deltas.X > 0)
-                            {
-                                if (eq.StartPoint.X < point.X && point.X < eq.StartPoint.X + eq.Deltas.X)
-                                {
-                                    intersections.Add(new Tuple<int, int, Vector2>(objIdx, w, point));
-                                }
-                                    
-                            }
-                            else if (eq.Deltas.X < 0)
-                            {
-                                if (eq.StartPoint.X > point.X && point.X > eq.StartPoint.X + eq.Deltas.X)
-                                {
-                                    intersections.Add(new Tuple<int, int, Vector2>(objIdx, w, point));
-                                }
-                            }
-                            
                         }
                     }
                 }
             }
-            //intersections.Sort((x, y) => { return x.Item3.X < y.Item3.X ? -1 : 1; });
             return intersections;
         }
         
-        public Tuple<List<Tuple<int, int, Vector2>>, List<Tuple<int, int, Vector2>>> FilterSinglePoints(List<Tuple<int, int, Vector2>> intersections)
+        private Tuple<float,float> getLine(Tuple<int, int, Vector2> point1, Tuple<int, int, Vector2> point2)
         {
-            Dictionary<string, int> objectsAndWallsMap = new Dictionary<string, int>();
-
-            foreach(Tuple<int, int, Vector2> element in intersections)
-            {
-                if (objectsAndWallsMap.ContainsKey(element.Item1.ToString() + "_" + element.Item2.ToString()))
-                {
-                    objectsAndWallsMap[element.Item1.ToString() + "_" + element.Item2.ToString()]++;
-                }
-                else
-                {
-                    objectsAndWallsMap[element.Item1.ToString() + "_" + element.Item2.ToString()] = 1;
-                }
-            }
-
-            List<Tuple<int, int, Vector2>> filteredPoints = new List<Tuple<int, int, Vector2>>();
-            List<Tuple<int, int, Vector2>> restIntersections = new List<Tuple<int, int, Vector2>>();
-
-            foreach(Tuple<int, int, Vector2> element in intersections)
-            {
-                if (objectsAndWallsMap[element.Item1.ToString() + "_" + element.Item2.ToString()] == 1)
-                {
-                    filteredPoints.Add(element);
-                }
-                else
-                {
-                    restIntersections.Add(element);
-                }
-            }
-
-            return new Tuple<List<Tuple<int, int, Vector2>>, List<Tuple<int, int, Vector2>>>(filteredPoints, restIntersections);
+            float a = (point1.Item3.Y - point2.Item3.Y)/(point1.Item3.Y - point2.Item3.Y);
+            float b = (point1.Item3.Y - a * point1.Item3.X);
+            return Tuple.Create(a, b);
         }
 
-        public List<Tuple<int, int, Vector2, Tuple<float, float>>> CalculateLines(List<Tuple<int, int, Vector2>> restIntersections, ref List<Tuple<int, int, Vector2>> singlePoints) // wyliczanie linii tworzonych przez punkty przeciecia
-        {
-            List<Tuple<int, int, Vector2, Tuple<float, float>>> lines = new List<Tuple<int, int, Vector2, Tuple<float, float>>>();
-            for(int i = 0; i < restIntersections.Count - 1; i++)
+
+        private SharpDX.Color[] getColors(List<Tuple<int, int, Vector2>> intersections)
+        {   
+            // wyliczam kolory linii // zachowuje kolor i glebokosc
+            float mostLeft = - HorizontalViewRange / 2;
+            float space = HorizontalViewRange / Width;
+            float[] glebokosci = new float[Width];
+            SharpDX.Color[] linia = new SharpDX.Color[Width];
+            for (int i = 0; i< glebokosci.Length; i++)
             {
-                for(int j = i + 1; j < restIntersections.Count; j++)
+                glebokosci[i] = float.MaxValue;
+                //wypełnienie
+                linia[i] = new SharpDX.Color(0, 0, 0, 255);
+            }
+            
+            while(intersections.Count > 0)
+            {
+                Tuple<int, int, Vector2> point1 = intersections[0];
+                intersections.RemoveAt(0);
+                Tuple<int, int, Vector2> point2 = null;
+                //Obliczenie kolorów dla linii
+                if (intersections.Count > 0 && intersections[0].Item1 == point1.Item1 && intersections[0].Item2 == point1.Item2)
                 {
-                    if(restIntersections[i].Item1 == restIntersections[j].Item1 && restIntersections[i].Item2 == restIntersections[j].Item2) // ten sam obiekt i sciana
+
+                    point2 = intersections[0];
+                    intersections.RemoveAt(0);
+                    if (point1.Item3.X > point2.Item3.X)
                     {
-                        Vector2 p1 = restIntersections[i].Item3, p2 = restIntersections[j].Item3;
-                        if (p1.Y < 0 && p2.Y < 0)
+                        var tmp = point1;
+                        point1 = point2;
+                        point2 = tmp;
+                    }
+
+                    Tuple<float, float> line = getLine(point1, point2);
+                    int firstIndex = (int)((point1.Item3.X / space) + (Width / 2));
+                    int lastIndex = (int)((point1.Item3.X / space) + (Width / 2));
+                    // sprawdzanie czy mieści się w ekranie
+                    if (firstIndex > Width && lastIndex > Width || firstIndex < 0 && lastIndex < 0)
+                        continue;
+                    else
+                    {
+                        if (firstIndex < 0)
+                            firstIndex = 0;
+                        if (lastIndex >= Width)
+                            lastIndex = Width -1;
+                    }
+                    // zaznaczanie na lini koloru razem z głebokością
+                    for (int i = firstIndex; i <= lastIndex; i++)
+                    {
+                        float z = 0;
+                        z = i * space * line.Item1 + line.Item2;
+                        if(glebokosci[i] > z && z >= 0)
                         {
-                            continue;
+                            glebokosci[i] = z;
+                            linia[i] = objects[point1.Item1].Color;
                         }
-                        if (p1.X - p2.X == 0)
+                    }
+                }
+                else
+                {
+                    if ( point1.Item3.X > mostLeft && - mostLeft > point1.Item3.X && point1.Item3.Y >= 0)
+                    {
+                        int index = (int)((point1.Item3.X / space) + (Width / 2));
+                        if (glebokosci[index] > point1.Item3.Y)
                         {
-                            if (p1.Y >= 0 && p2.Y < 0 || p2.Y >= 0 && p1.Y < 0)
-                            {
-                                singlePoints.Add(new Tuple<int, int, Vector2>(restIntersections[i].Item1, restIntersections[i].Item2, new Vector2(p1.X, 0)));
-                            }
-                            if (p1.Y > 0 && p2.Y > 0)
-                            {
-                                singlePoints.Add(new Tuple<int, int, Vector2>(restIntersections[i].Item1, restIntersections[i].Item2, new Vector2(p1.X, Math.Min(p1.Y, p2.Y))));
-                            }
-                        }
-                        else
-                        {
-                            float coefficient_x = (p1.Y - p2.Y) / (p1.X - p2.X);
-                            float coefficient_y = (p1.Y - coefficient_x * p1.X);
-                            lines.Add(new Tuple<int, int, Vector2, Tuple<float,float>>(restIntersections[i].Item1, restIntersections[i].Item2, new Vector2(coefficient_x, coefficient_y), new Tuple<float,float>(p1.X, p2.X)));
+                            linia[index] = objects[point1.Item1].Color;
+                            glebokosci[index] = point1.Item3.Y;
                         }
                     }
                 }
             }
-            return lines;
+            return linia;
         }
-
-        public SharpDX.Color GetPixelColor(float horizontalValue, List<Tuple<int, int, Vector2, Tuple<float, float>>> lines, List<Tuple<int, int, Vector2>> singlePoints)
-        {
-            Dictionary<string, int> dict = new Dictionary<string, int>();
-
-            SharpDX.Color returnedColor = new SharpDX.Color(0, 0, 0, 1f);
-            float minZ = float.MaxValue;
-            for(int i = 0; i < lines.Count; i++)
-            {
-                if (   lines[i].Item4.Item1 < horizontalValue && horizontalValue < lines[i].Item4.Item2 
-                    || lines[i].Item4.Item2 < horizontalValue && horizontalValue < lines[i].Item4.Item1 )
-                {
-                    float z = lines[i].Item3.X * horizontalValue + lines[i].Item3.Y;
-                    if (z < minZ)
-                    {
-                        minZ = z;
-                        returnedColor = objects[lines[i].Item1].Color;
-                    }
-                }
-            }
-
-            foreach (Tuple<int, int, Vector2> point in singlePoints)
-            {
-                if (point.Item3.Y < minZ)
-                {
-                    minZ = point.Item3.Y;
-                    returnedColor = objects[point.Item1].Color;
-                }
-            }
-            return returnedColor;
-        }
-
         private void Draw()
         {
+            // rzut na przestrzeń perspektywy
             List<Object3D> newObjects= Converter.Render(objects, this);
             for(int scanlineNumber = 0; scanlineNumber < PlanesList.Count; scanlineNumber++)
             {
                 ScanPlane scanline = PlanesList[scanlineNumber];
+                // znajdź punkty przecięcia lini z płaszczyzną
                 List<Tuple<int, int, Vector2>> intersections = FindIntersections(scanline, newObjects);
-
-                //Console.WriteLine("Intersection value -> z(x): x = {0}, z = {1}", intersections[0].Item3.X, intersections[0].Item3.Y);
-                Tuple<List<Tuple<int, int, Vector2>>, List<Tuple<int, int, Vector2>>> filtrationResults = FilterSinglePoints(intersections);
-
-                List<Tuple<int, int, Vector2>> singlePoints = filtrationResults.Item1;
-                List<Tuple<int, int, Vector2, Tuple<float, float>>> lines = CalculateLines(intersections, ref singlePoints); // filtrationResults.Item2 - rest intersections
+                SharpDX.Color[] rzadPixeli = getColors(intersections);
 
                 float mostLeft = -0.5f * HorizontalViewRange;
                 float step = HorizontalViewRange / Width;
 
                 for (int x = 0; x < Width; x++)
                 {
-                    SharpDX.Color color = GetPixelColor(mostLeft + x * step, lines, singlePoints);
-                    //Console.WriteLine("Dla piksela ({0}, {1}) jest kolor: {2}", x, scanlineNumber, color.ToString());
-
-                    Converter.UpdatePixelValue(x, scanlineNumber, (byte)( color.R), (byte)( color.G), (byte)( color.B), (byte)( color.A), this);
+                    Converter.UpdatePixelValue(x, scanlineNumber, rzadPixeli[x], this);
                 }
             }
 

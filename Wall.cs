@@ -29,10 +29,7 @@ namespace VirtualCamera
                 pointer = Vertices[i];
                 tmp = Vertices[(i + 1) % Vertices.Count];
 
-                //Console.WriteLine(pointer.ToString());
-                //Console.WriteLine(tmp.ToString());
-
-                Vector3 diffV = pointer - tmp;
+                Vector3 diffV = new Vector3(tmp.X -pointer.X, tmp.Y - pointer.Y, tmp.Z - pointer.Z);
                 Equations.Add(new LineEquation(pointer, diffV));
             }
             return Equations;
