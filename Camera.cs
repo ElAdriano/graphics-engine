@@ -154,7 +154,6 @@ namespace VirtualCamera
                             float numerator = -(plane.SurfaceCoefficients[3] + plane.SurfaceCoefficients[1] * eq.StartPoint.Y);//-(plane.SurfaceCoefficients[0] * eq.StartPoint.X + plane.SurfaceCoefficients[1] * eq.StartPoint.Y + plane.SurfaceCoefficients[2] * eq.StartPoint.Z + plane.SurfaceCoefficients[3]);
                             float denominator = plane.SurfaceCoefficients[1] * eq.Deltas.Y;// plaszczyzny sa tylko rownolegle do pl. XoZ, wiec A i C = 0
                             
-                            //plane.SurfaceCoefficients[0] * eq.Deltas.X + plane.SurfaceCoefficients[1] * eq.Deltas.Y + plane.SurfaceCoefficients[2] * eq.Deltas.Z;
                             float t = numerator / denominator;
 
 /*                          Console.WriteLine("\n\n\n");
@@ -169,6 +168,20 @@ namespace VirtualCamera
 */
                             Vector2 point = new Vector2(eq.StartPoint.X + eq.Deltas.X * t, eq.StartPoint.Z + eq.Deltas.Z * t);
                             //     Console.WriteLine("point = " + point.ToString());
+                            //NotImplementedException sprawdzam przypadków zerowych wiem.
+                            //Ograniczenie Z
+                            if (eq.Deltas.Z > 0)
+                            {
+                                if (eq.StartPoint.Z > point.Y && point.Y > eq.StartPoint.Z + eq.Deltas.Z)
+                                    continue;
+                            }
+                            else if (eq.Deltas.Z < 0)
+                            {
+                                if (eq.StartPoint.Z < point.Y && point.Y < eq.StartPoint.Z + eq.Deltas.Z)
+                                    continue;
+                            }
+
+                            // ograniczenie X
                             if (eq.Deltas.X > 0)
                             {
                                 if (eq.StartPoint.X < point.X && point.X < eq.StartPoint.X + eq.Deltas.X)
