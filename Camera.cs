@@ -12,8 +12,8 @@ namespace VirtualCamera
     {
         private RenderForm renderForm;
 
-        public const int Width = 256;
-        public const int Height = 144;
+        public const int Width = 480;//256;
+        public const int Height = 360;//144;
 
         public WindowRenderTarget CameraView;
         public Vector3 Position;
@@ -51,7 +51,7 @@ namespace VirtualCamera
             SceneCache = new byte[Width * Height * 4];
             Zoom = 1;
             AngleOfView = 0.78f;
-            FarClippingValue = 1;
+            FarClippingValue = 1f;
             NearClippingValue = 0.01f;
 
             RenderTargetProperties renderTargetProperties = new RenderTargetProperties()
@@ -83,7 +83,6 @@ namespace VirtualCamera
 
             VerticalViewRange = 10;
             HorizontalViewRange = ctg * VerticalViewRange;
-
             CreatePlanes();
         }
 
@@ -100,8 +99,8 @@ namespace VirtualCamera
                 tmpList = new List<Vector3>();
                 tmpList.Add(new Vector3(0, HighestRow - i * spaceBetween, 0));
 
-                tmpList.Add(new Vector3(FarClippingValue * (float)Math.Tan( -HorizontalAngle), HighestRow - i * spaceBetween , FarClippingValue));
-                tmpList.Add(new Vector3(FarClippingValue * (float)Math.Tan( HorizontalAngle), HighestRow - i * spaceBetween, FarClippingValue));
+                tmpList.Add(new Vector3(-1, HighestRow - i * spaceBetween , FarClippingValue));
+                tmpList.Add(new Vector3(1, HighestRow - i * spaceBetween, FarClippingValue));
                 
                 PlanesList.Add(new ScanPlane(tmpList));
             }
@@ -154,10 +153,11 @@ namespace VirtualCamera
                         {
                             float numerator = -(plane.SurfaceCoefficients[3] + plane.SurfaceCoefficients[1] * eq.StartPoint.Y);//-(plane.SurfaceCoefficients[0] * eq.StartPoint.X + plane.SurfaceCoefficients[1] * eq.StartPoint.Y + plane.SurfaceCoefficients[2] * eq.StartPoint.Z + plane.SurfaceCoefficients[3]);
                             float denominator = plane.SurfaceCoefficients[1] * eq.Deltas.Y;// plaszczyzny sa tylko rownolegle do pl. XoZ, wiec A i C = 0
-                                                                                           //plane.SurfaceCoefficients[0] * eq.Deltas.X + plane.SurfaceCoefficients[1] * eq.Deltas.Y + plane.SurfaceCoefficients[2] * eq.Deltas.Z;
+                            
+                            //plane.SurfaceCoefficients[0] * eq.Deltas.X + plane.SurfaceCoefficients[1] * eq.Deltas.Y + plane.SurfaceCoefficients[2] * eq.Deltas.Z;
                             float t = numerator / denominator;
 
-                            Console.WriteLine("\n\n\n");
+/*                          Console.WriteLine("\n\n\n");
                             Console.WriteLine(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
 
                             Console.WriteLine("t = {0}, numerator = {1}, denominator = {2}", t, numerator, denominator);
@@ -166,28 +166,27 @@ namespace VirtualCamera
 
                             Console.WriteLine("eq startPoint = " + eq.StartPoint.ToString());
                             Console.WriteLine("eq deltas = " + eq.Deltas.ToString());
+*/
                             Vector2 point = new Vector2(eq.StartPoint.X + eq.Deltas.X * t, eq.StartPoint.Z + eq.Deltas.Z * t);
-                            Console.WriteLine("point = " + point.ToString());
-                            intersections.Add(new Tuple<int, int, Vector2>(objIdx, w, point));
-                        }
-                    }
-                    /*
-                     * for (int i = 0; i < intersections.Count; i++)
-                    {
-                        Vector2 point = intersections[i];
-                        for(int j = 0; j < wall.Vertices.Count; j++)
-                        {
-                            Vector3 vertex = wall.Vertices[j];
-                            if (vertex == new Vector3(point.X, plane.SurfaceCoefficients[3], point.Y))
+                            //     Console.WriteLine("point = " + point.ToString());
+                            if (eq.Deltas.X > 0)
                             {
-                                if (wall.Vertices[(j + 1) % wall.Vertices.Count].Y == plane.SurfaceCoefficients[3] && )
+                                if (eq.StartPoint.X < point.X && point.X < eq.StartPoint.X + eq.Deltas.X)
                                 {
+                                    intersections.Add(new Tuple<int, int, Vector2>(objIdx, w, point));
+                                }
                                     
+                            }
+                            else if (eq.Deltas.X < 0)
+                            {
+                                if (eq.StartPoint.X > point.X && point.X > eq.StartPoint.X + eq.Deltas.X)
+                                {
+                                    intersections.Add(new Tuple<int, int, Vector2>(objIdx, w, point));
                                 }
                             }
+                            
                         }
                     }
-                    */
                 }
             }
             //intersections.Sort((x, y) => { return x.Item3.X < y.Item3.X ? -1 : 1; });
@@ -298,17 +297,17 @@ namespace VirtualCamera
 
         private void Draw()
         {
-            Converter.Render(objects, this);
+            List<Object3D> newObjects= Converter.Render(objects, this);
             for(int scanlineNumber = 0; scanlineNumber < PlanesList.Count; scanlineNumber++)
             {
                 ScanPlane scanline = PlanesList[scanlineNumber];
-                List<Tuple<int, int, Vector2>> intersections = FindIntersections(scanline, objects);
+                List<Tuple<int, int, Vector2>> intersections = FindIntersections(scanline, newObjects);
 
                 //Console.WriteLine("Intersection value -> z(x): x = {0}, z = {1}", intersections[0].Item3.X, intersections[0].Item3.Y);
                 Tuple<List<Tuple<int, int, Vector2>>, List<Tuple<int, int, Vector2>>> filtrationResults = FilterSinglePoints(intersections);
 
                 List<Tuple<int, int, Vector2>> singlePoints = filtrationResults.Item1;
-                List<Tuple<int, int, Vector2, Tuple<float, float>>> lines = CalculateLines(filtrationResults.Item2, ref singlePoints); // filtrationResults.Item2 - rest intersections
+                List<Tuple<int, int, Vector2, Tuple<float, float>>> lines = CalculateLines(intersections, ref singlePoints); // filtrationResults.Item2 - rest intersections
 
                 float mostLeft = -0.5f * HorizontalViewRange;
                 float step = HorizontalViewRange / Width;
@@ -318,13 +317,13 @@ namespace VirtualCamera
                     SharpDX.Color color = GetPixelColor(mostLeft + x * step, lines, singlePoints);
                     //Console.WriteLine("Dla piksela ({0}, {1}) jest kolor: {2}", x, scanlineNumber, color.ToString());
 
-                    Converter.UpdatePixelValue(x, scanlineNumber, (byte)(255 * color.R), (byte)(255 * color.G), (byte)(255 * color.B), (byte)(255 * color.A), this);
+                    Converter.UpdatePixelValue(x, scanlineNumber, (byte)( color.R), (byte)( color.G), (byte)( color.B), (byte)( color.A), this);
                 }
             }
 
             SceneBuffer.CopyFromMemory(SceneCache, 4 * Width);
             CameraView.BeginDraw();
-            CameraView.Clear(new Color4(0, 0, 0, 1f));
+            CameraView.Clear(new Color4(0, 0, 0, 255f));
             CameraView.DrawBitmap(SceneBuffer, 1f, BitmapInterpolationMode.Linear);
             CameraView.EndDraw();
         }
