@@ -12,7 +12,8 @@ namespace VirtualCamera
         public List<Vector3> Vertices;
         public float[] PlaneCoefficients;
 
-        public List<Vector2> TwoDimentionalBorders;
+        public List<Vector3> TwoDimentionalBorders;
+
         public List<Tuple<int, float, float, float, float>> CastEquations;
 
         public Wall(List<Vector3> v)
@@ -23,7 +24,7 @@ namespace VirtualCamera
             }
             Vertices = v;
             FindPlanes();
-            TwoDimentionalBorders = new List<Vector2>();
+            TwoDimentionalBorders = new List<Vector3>();
             CastEquations = new List<Tuple<int, float, float, float, float>>();
         }
 
@@ -38,7 +39,8 @@ namespace VirtualCamera
          */
         public void FindCast2DEquations()
         {
-            Vector2 p1, p2;
+            CastEquations.Clear();
+            Vector3 p1, p2;
             for(int i = 0; i < TwoDimentionalBorders.Count(); i++)
             {
                 p1 = TwoDimentionalBorders[i];

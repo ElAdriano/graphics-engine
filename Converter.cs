@@ -27,14 +27,15 @@ namespace VirtualCamera
             }
         }
 
-        private static Vector2 CastTo2D(Vector3 point, Matrix transformationMatrix, Camera camera)
+        // zwraca x, y punktu na ekranie i przeksztalcone z
+        private static Vector3 CastTo2D(Vector3 point, Matrix transformationMatrix, Camera camera)
         {
             var movedPoint = Vector3.TransformCoordinate(point, transformationMatrix);
 
             //Console.WriteLine("point = {0}, movedPoint = {1}", point.ToString(), movedPoint.ToString());
             var x = movedPoint.X * Camera.Width * camera.Zoom + Camera.Width / 2.0f;
             var y = -movedPoint.Y * Camera.Height * camera.Zoom + Camera.Height / 2.0f;
-            return (new Vector2(x, y));
+            return new Vector3(x, y, movedPoint.Z);
         }
 
         private static double CalculatePointsDistance(Vector2 point1, Vector2 point2)
@@ -76,11 +77,15 @@ namespace VirtualCamera
             return PointInside;
         }
 
-        private static SharpDX.Color GetPixelValue(List<Object3D> objects, int pixelX, int pixelY)
+        private static SharpDX.Color GetPixelValue(List<Object3D> objects, int pixelX, int pixelY, Camera camera)
         {
             List<Tuple<int, int>> PixelOwners = new List<Tuple<int, int>>(); // para <index obiektu, index sciany>
             for(int objNum = 0; objNum < objects.Count(); objNum++)
             {
+                if(objects[objNum].Position.Z > 0)
+                {
+                    continue;
+                }
                 for(int wallNum = 0; wallNum < objects[objNum].Walls.Count(); wallNum++)
                 {
                     bool containsPixel = PixelInPolygon(pixelX, pixelY, objects[objNum].Walls[wallNum]);
@@ -98,19 +103,33 @@ namespace VirtualCamera
             else
             {
                 SharpDX.Color returnedColor = new SharpDX.Color(0, 0, 0, 255);
-                float minZ = float.MaxValue;
+                float minZ = float.MinValue;
                 float z;
                 for(int i = 0; i < PixelOwners.Count; i++)
                 {
+                    var worldMatrix = Matrix.Translation(objects[PixelOwners[i].Item1].Position) * Matrix.RotationYawPitchRoll(objects[PixelOwners[i].Item1].Rotation.X, objects[PixelOwners[i].Item1].Rotation.Y, objects[PixelOwners[i].Item1].Rotation.Z);
+                    var viewMatrix = Matrix.LookAtLH(camera.Position, camera.Target, Vector3.UnitY);
+                    var projectionMatrix = Matrix.PerspectiveFovRH(0.78f, (float)Camera.Width / Camera.Height, 0.01f, 1.0f);
+
+                    var transformMatrix = worldMatrix * viewMatrix * projectionMatrix;
+                    transformMatrix = Matrix.Invert(transformMatrix);
+
+                    var precastX = (pixelX - Camera.Width / 2.0f) / (Camera.Width * camera.Zoom);
+                    var precastY = (Camera.Height/2.0f - pixelY) / (Camera.Height * camera.Zoom);
+                    var precastZ = objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].TwoDimentionalBorders.Find(x => { return x.X == pixelX && x.Y == pixelY; }).Z;
+
+                    var aftercastVector = new Vector3(precastX, precastY, precastZ);
+                    var beforecastVector = Vector3.TransformCoordinate(aftercastVector, transformMatrix);
+
                     float[] planeCoefficients = objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].PlaneCoefficients;
                     if (planeCoefficients[2] == 0)
                     {
-
+                        
                     }
                     else
                     {
-                        z = -(planeCoefficients[3] + planeCoefficients[0] * pixelX + planeCoefficients[1] * pixelY) / planeCoefficients[2];
-                        if (z < minZ)
+                        z = -(planeCoefficients[3] + planeCoefficients[0] * beforecastVector.X + planeCoefficients[1] * beforecastVector.Y) / planeCoefficients[2];
+                        if (z > minZ)
                         {
                             minZ = z;
                             returnedColor = objects[PixelOwners[i].Item1].Color;
@@ -192,6 +211,7 @@ namespace VirtualCamera
                 var projectionMatrix = Matrix.PerspectiveFovRH(0.78f, (float)Camera.Width / Camera.Height, 0.01f, 1.0f);
 
                 var transformMatrix = worldMatrix * viewMatrix * projectionMatrix;
+                Dictionary<string, Vector2> renderedVertices = new Dictionary<string, Vector2>();
 
                 foreach (Wall wall in obj.Walls)
                 {
@@ -200,45 +220,50 @@ namespace VirtualCamera
                     {
                         var calculatedPoint = CastTo2D(vertex, transformMatrix, camera);
                         wall.TwoDimentionalBorders.Add(calculatedPoint);
+
+                        if (!renderedVertices.ContainsKey(vertex.ToString()))
+                        {
+                            RenderPoint(new Vector2(calculatedPoint.X, calculatedPoint.Y), camera, obj.Color);
+                            renderedVertices.Add(vertex.ToString(), new Vector2(calculatedPoint.X, calculatedPoint.Y));
+                        }
                     }
-                    wall.CastEquations.Clear();
                     wall.FindCast2DEquations();
+                }
+
+                string vertex1Id, vertex2Id;
+                foreach (Wall wall in obj.Walls)
+                {
+                    for (int i = 0; i < wall.Vertices.Count - 1; i++)
+                    {
+                        vertex1Id = wall.Vertices[i].ToString();
+                        vertex2Id = wall.Vertices[i + 1].ToString();
+                        if (renderedVertices.ContainsKey(vertex1Id) && renderedVertices.ContainsKey(vertex2Id))
+                        {
+                            RenderLineBetweenPoints(renderedVertices[vertex1Id], renderedVertices[vertex2Id], camera, obj.Color);
+                        }
+                    }
+
+                    vertex1Id = wall.Vertices[wall.Vertices.Count - 1].ToString();
+                    vertex2Id = wall.Vertices[0].ToString();
+                    if (renderedVertices.ContainsKey(vertex1Id) && renderedVertices.ContainsKey(vertex2Id))
+                    {
+                        RenderLineBetweenPoints(renderedVertices[vertex1Id], renderedVertices[vertex2Id], camera, obj.Color);
+                    }
                 }
             }
 
-            for(int pixelY = 0; pixelY < Camera.Height; pixelY++)
+            for (int pixelY = 0; pixelY < Camera.Height; pixelY++)
             {
-                List<Tuple<int, int, float>> solutions = FindIntersections(objects, Camera.Height - pixelY);
+                List<Tuple<int, int, float>> solutions = FindIntersections(objects, pixelY);
 
-                /*if (solutions.Count() > 0)
+                if (solutions.Count() > 0) 
                 {
-                    for(int pixelX = (int)solutions[0].Item3; pixelX <= (int)solutions[solutions.Count() - 1].Item3; pixelX++)
+                    for (int pixelX = (int)solutions[0].Item3; pixelX <= (int)Math.Ceiling(solutions[solutions.Count() - 1].Item3); pixelX++)
                     {
-                        SharpDX.Color pixelColor = GetPixelValue(objects, pixelX, pixelY);
+                        SharpDX.Color pixelColor = GetPixelValue(objects, pixelX, pixelY, camera);
                         RenderPoint(new Vector2(pixelX, pixelY), camera, pixelColor);
                     }
-                }*/
-                for(int solNum = 0; solNum < solutions.Count() - 1; solNum++) 
-                {
-                    if (solutions[solNum].Item1 != solutions[solNum + 1].Item1)
-                    {
-                        RenderPoint(new Vector2(solutions[solNum].Item3, pixelY), camera, objects[solutions[solNum].Item1].Color);
-                    }
-                    else
-                    {
-                        RenderLineBetweenPoints(
-                            new Vector2(solutions[solNum].Item3, pixelY),
-                            new Vector2(solutions[solNum + 1].Item3, pixelY),
-                            camera,
-                            objects[solutions[solNum].Item1].Color
-                        );
-                    }
                 }
-                /*for(int pixelX = 0; pixelX < Camera.Width; pixelX += 2)
-                {
-                    SharpDX.Color pixelColor = GetPixelValue(objects, pixelX, pixelY);
-                    RenderPoint(new Vector2(pixelX, pixelY), camera, pixelColor);
-                }*/
             }
         }
     }
