@@ -20,7 +20,7 @@ namespace VirtualCamera
             Vertices = v;
         }
 
-        public List<LineEquation> CalculateEquationsForEdges()
+        public List<LineEquation> CalculateEquationsForEdges(int objId, int wallId)
         {
             List<LineEquation> Equations = new List<LineEquation>();
             Vector3 pointer, tmp;
@@ -30,7 +30,7 @@ namespace VirtualCamera
                 tmp = Vertices[(i + 1) % Vertices.Count];
 
                 Vector3 diffV = new Vector3(tmp.X -pointer.X, tmp.Y - pointer.Y, tmp.Z - pointer.Z);
-                Equations.Add(new LineEquation(pointer, diffV));
+                Equations.Add(new LineEquation(pointer, diffV, objId, wallId));
             }
             return Equations;
         }

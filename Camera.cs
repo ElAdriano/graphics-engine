@@ -76,7 +76,7 @@ namespace VirtualCamera
             float ctg = (float)Width / Height;
             HorizontalAngle = (AngleOfView * ctg) / 2;
 
-            VerticalViewRange = 10;
+            VerticalViewRange = 1000;
             HorizontalViewRange = ctg * VerticalViewRange;
             CreatePlanes();
         }
@@ -116,51 +116,53 @@ namespace VirtualCamera
                 SceneCache[4 * i + 3] = a;
             }
         }
+        private List<LineEquation> getEdges(List<Object3D> objects)
+        {
+            List<LineEquation> eqs = new List<LineEquation>();
+            for (int o = 0; o < objects.Count; o++)
+            {
+                for(int w = 0; w < objects[o].Walls.Count; w++)
+                {
+                    eqs.AddRange(objects[o].Walls[w].CalculateEquationsForEdges(o,w));
+                }
+            }
+            return eqs;
+        }
 
-        public List<Tuple<int, int, Vector2>> FindIntersections(ScanPlane plane, List<Object3D> objects)
+        public List<Tuple<int, int, Vector2>> FindIntersections(ScanPlane plane, List<LineEquation> list)
         {
             List<Tuple<int, int, Vector2>> intersections = new List<Tuple<int, int, Vector2>>();
-            for (int objIdx = 0; objIdx < objects.Count; objIdx++)
+
+            foreach (LineEquation eq in list)
             {
-                Object3D obj = objects[objIdx];
-                for(int w = 0; w < obj.Walls.Count; w++)
+                if (eq.Deltas.Y == 0)
                 {
-                    Wall wall = obj.Walls[w];
-                    List<LineEquation> list = wall.CalculateEquationsForEdges();
-
-                    foreach(LineEquation eq in list)
+                    if (eq.StartPoint.Y == plane.YValue)
                     {
-                        if(eq.Deltas.Y == 0)
-                        {
-                            if (eq.StartPoint.Y == plane.YValue)
-                            {
-                                Vector2 point = new Vector2(eq.StartPoint.X, eq.StartPoint.Z);
-                                intersections.Add(new Tuple<int, int, Vector2>(objIdx, w, point));
-                                point = new Vector2(eq.StartPoint.X + eq.Deltas.X, eq.StartPoint.Z + eq.Deltas.Z);
-                                intersections.Add(new Tuple<int, int, Vector2>(objIdx, w, point));
-                            }
-                            else
-                            {
-                                continue;
-                            }
-                        }
-                        else
-                        {
-                            float numerator = -(plane.SurfaceCoefficients[3] + plane.SurfaceCoefficients[1] * eq.StartPoint.Y);//-(plane.SurfaceCoefficients[0] * eq.StartPoint.X + plane.SurfaceCoefficients[1] * eq.StartPoint.Y + plane.SurfaceCoefficients[2] * eq.StartPoint.Z + plane.SurfaceCoefficients[3]);
-                            float denominator = plane.SurfaceCoefficients[1] * eq.Deltas.Y;// plaszczyzny sa tylko rownolegle do pl. XoZ, wiec A i C = 0
-                            
-                            float t = numerator / denominator;
-
-                            Vector2 point = new Vector2(eq.StartPoint.X + eq.Deltas.X * t, eq.StartPoint.Z + eq.Deltas.Z * t);
-                            intersections.Add(new Tuple<int, int, Vector2>(objIdx, w, point));
-
-                        }
+                        Vector2 point = new Vector2(eq.StartPoint.X, eq.StartPoint.Z);
+                        intersections.Add(new Tuple<int, int, Vector2>(eq.ObjID, eq.WallID, point));
+                        point = new Vector2(eq.StartPoint.X + eq.Deltas.X, eq.StartPoint.Z + eq.Deltas.Z);
+                        intersections.Add(new Tuple<int, int, Vector2>(eq.ObjID, eq.WallID, point));
                     }
+                    else
+                    {
+                        continue;
+                    }
+                }
+                else
+                {
+                    float numerator = -(plane.SurfaceCoefficients[3] + plane.SurfaceCoefficients[1] * eq.StartPoint.Y);//-(plane.SurfaceCoefficients[0] * eq.StartPoint.X + plane.SurfaceCoefficients[1] * eq.StartPoint.Y + plane.SurfaceCoefficients[2] * eq.StartPoint.Z + plane.SurfaceCoefficients[3]);
+                    float denominator = plane.SurfaceCoefficients[1] * eq.Deltas.Y;// plaszczyzny sa tylko rownolegle do pl. XoZ, wiec A i C = 0
+
+                    float t = numerator / denominator;
+
+                    Vector2 point = new Vector2(eq.StartPoint.X + eq.Deltas.X * t, eq.StartPoint.Z + eq.Deltas.Z * t);
+                    intersections.Add(new Tuple<int, int, Vector2>(eq.ObjID, eq.WallID, point));
+
                 }
             }
             return intersections;
-        }
-        
+        }       
         private Tuple<float,float> getLine(Tuple<int, int, Vector2> point1, Tuple<int, int, Vector2> point2)
         {
             float a = (point1.Item3.Y - point2.Item3.Y)/(point1.Item3.Y - point2.Item3.Y);
@@ -245,11 +247,13 @@ namespace VirtualCamera
         {
             // rzut na przestrzeń perspektywy
             List<Object3D> newObjects= Converter.Render(objects, this);
+            List<LineEquation> edges = getEdges(newObjects);
             for(int scanlineNumber = 0; scanlineNumber < PlanesList.Count; scanlineNumber++)
             {
                 ScanPlane scanline = PlanesList[scanlineNumber];
                 // znajdź punkty przecięcia lini z płaszczyzną
-                List<Tuple<int, int, Vector2>> intersections = FindIntersections(scanline, newObjects);
+                List<Tuple<int, int, Vector2>> intersections = FindIntersections(scanline, edges);
+                Console.WriteLine("Znalazłem tyle przecięć: {0}", intersections.Count);
                 SharpDX.Color[] rzadPixeli = getColors(intersections);
 
                 float mostLeft = -0.5f * HorizontalViewRange;
@@ -263,7 +267,7 @@ namespace VirtualCamera
 
             SceneBuffer.CopyFromMemory(SceneCache, 4 * Width);
             CameraView.BeginDraw();
-            CameraView.Clear(new Color4(0, 0, 0, 255f));
+          //  CameraView.Clear(new Color4(0, 0, 0, 255f));
             CameraView.DrawBitmap(SceneBuffer, 1f, BitmapInterpolationMode.Linear);
             CameraView.EndDraw();
         }
