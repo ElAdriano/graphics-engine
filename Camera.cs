@@ -76,7 +76,7 @@ namespace VirtualCamera
             float ctg = (float)Width / Height;
             HorizontalAngle = (AngleOfView * ctg) / 2;
 
-            VerticalViewRange = 1000;
+            VerticalViewRange = 10;
             HorizontalViewRange = ctg * VerticalViewRange;
             CreatePlanes();
         }
@@ -128,6 +128,12 @@ namespace VirtualCamera
             }
             return eqs;
         }
+        private Tuple<float, float> getLine(Tuple<int, int, Vector2> point1, Tuple<int, int, Vector2> point2)
+        {
+            float a = (point1.Item3.Y - point2.Item3.Y) / (point1.Item3.X - point2.Item3.X);
+            float b = (point1.Item3.Y - a * point1.Item3.X);
+            return Tuple.Create(a, b);
+        }
 
         public List<Tuple<int, int, Vector2>> FindIntersections(ScanPlane plane, List<LineEquation> list)
         {
@@ -135,15 +141,59 @@ namespace VirtualCamera
 
             foreach (LineEquation eq in list)
             {
+                //TO-DO
+                // trzeba dorobić ścięcie jeśli punkt jest poza, polem widzenia a ściana jest tam
+                //sprawdzenie czy linia jest równoległa do XOZ
                 if (eq.Deltas.Y == 0)
-                {
+                {   
+                    //sprawdzenie czy linie równoległa do XOZ zawiera się w płaszczyznie
+                    // wnętrze tego if jest skończone
                     if (eq.StartPoint.Y == plane.YValue)
                     {
+                        // test czy odcinek nie jest po za zakresem widoku popziomym
+                        if (eq.StartPoint.X < -HorizontalViewRange / 2 && eq.StartPoint.X + eq.Deltas.X < -HorizontalViewRange / 2 || eq.StartPoint.X > HorizontalViewRange / 2 && eq.StartPoint.X + eq.Deltas.X > HorizontalViewRange / 2)
+                            continue;
+                        // test czy odcinek nie znajdują się za kamarą
+                        if (eq.StartPoint.Z < 0 && eq.StartPoint.Z + eq.Deltas.Z < 0)
+                            continue;
                         Vector2 point = new Vector2(eq.StartPoint.X, eq.StartPoint.Z);
+                        // test na indywidualne położenie punktu
+                        if (point.X < -HorizontalViewRange / 2) {
+                            point.Y = point.Y + (point.X + HorizontalViewRange / 2) * eq.Deltas.Z / eq.Deltas.X;
+                            point.X = -HorizontalViewRange / 2;
+                        }
+                        if (point.X > HorizontalViewRange / 2)
+                        {
+                            point.Y = point.Y + (point.X - HorizontalViewRange / 2) * eq.Deltas.Z / eq.Deltas.X;
+                            point.X = HorizontalViewRange / 2;
+                        }
+                        if (point.Y < 0)
+                        {
+                            point.X = point.X - (- point.Y) * eq.Deltas.X / eq.Deltas.Z;
+                            point.Y = 0;
+                        }
                         intersections.Add(new Tuple<int, int, Vector2>(eq.ObjID, eq.WallID, point));
-                        point = new Vector2(eq.StartPoint.X + eq.Deltas.X, eq.StartPoint.Z + eq.Deltas.Z);
-                        intersections.Add(new Tuple<int, int, Vector2>(eq.ObjID, eq.WallID, point));
+
+                        Vector2 point2 = new Vector2(eq.StartPoint.X + eq.Deltas.X, eq.StartPoint.Z + eq.Deltas.Z);
+                        if (point2.X < -HorizontalViewRange / 2)
+                        {
+                            point2.Y = point2.Y + (point2.X + HorizontalViewRange / 2) * eq.Deltas.Z / eq.Deltas.X;
+                            point2.X = -HorizontalViewRange / 2;
+                        }
+                        if (point2.X > HorizontalViewRange / 2)
+                        {
+                            point2.Y = point2.Y + (point2.X - HorizontalViewRange / 2) * eq.Deltas.Z / eq.Deltas.X;
+                            point2.X = HorizontalViewRange / 2;
+                        }
+                        if (point2.Y < 0)
+                        {
+                            point2.X = point2.X - (-point2.Y) * eq.Deltas.X / eq.Deltas.Z;
+                            point2.Y = 0;
+                        }
+                        intersections.Add(new Tuple<int, int, Vector2>(eq.ObjID, eq.WallID, point2));
                     }
+
+
                     else
                     {
                         continue;
@@ -156,21 +206,15 @@ namespace VirtualCamera
 
                     float t = numerator / denominator;
 
-                    Vector2 point = new Vector2(eq.StartPoint.X + eq.Deltas.X * t, eq.StartPoint.Z + eq.Deltas.Z * t);
-                    intersections.Add(new Tuple<int, int, Vector2>(eq.ObjID, eq.WallID, point));
-
+                    // Wektor ma tę samą długość co krawędź więc jeśłi będziemy musieli dodać cos dłuszego niż vektor to jest to punkt po za krawędzią i jesli cos w drugą stronę to też jest to punkt po za krawędzią
+                    if (t <= 1f && t >= 0){
+                        Vector2 point = new Vector2(eq.StartPoint.X + eq.Deltas.X * t, eq.StartPoint.Z + eq.Deltas.Z * t);
+                        intersections.Add(new Tuple<int, int, Vector2>(eq.ObjID, eq.WallID, point));
+                    }
                 }
             }
             return intersections;
         }       
-        private Tuple<float,float> getLine(Tuple<int, int, Vector2> point1, Tuple<int, int, Vector2> point2)
-        {
-            float a = (point1.Item3.Y - point2.Item3.Y)/(point1.Item3.Y - point2.Item3.Y);
-            float b = (point1.Item3.Y - a * point1.Item3.X);
-            return Tuple.Create(a, b);
-        }
-
-
         private SharpDX.Color[] getColors(List<Tuple<int, int, Vector2>> intersections)
         {   
             // wyliczam kolory linii // zachowuje kolor i glebokosc
@@ -194,8 +238,30 @@ namespace VirtualCamera
                 if (intersections.Count > 0 && intersections[0].Item1 == point1.Item1 && intersections[0].Item2 == point1.Item2)
                 {
 
+
+
                     point2 = intersections[0];
                     intersections.RemoveAt(0);
+                    //kiedy prosta jest prostopadła do X
+   /* To -Do                 if(point1.Item3.X == point2.Item3.X )
+                    {
+                        // gdy odcinek jest za kamera
+                        if (point1.Item3.Y < 0 && point2.Item3.Y < 0)
+                            continue;
+                        //gdy linia przecina X
+                        else if (point1.Item3.Y < 0 || point2.Item3.Y < 0)
+                        {
+                            if (point1.Item3.Y < 0 && glebokosci[point1] >)
+                            {
+                                glebokosci
+                            }
+                            else
+                            {
+
+                            }
+                        }
+                    }*/
+                    // sortowania punktów
                     if (point1.Item3.X > point2.Item3.X)
                     {
                         var tmp = point1;
@@ -228,6 +294,7 @@ namespace VirtualCamera
                         }
                     }
                 }
+                // obliczenia dla punktu
                 else
                 {
                     if ( point1.Item3.X > mostLeft && - mostLeft > point1.Item3.X && point1.Item3.Y >= 0)
@@ -276,7 +343,6 @@ namespace VirtualCamera
         {
             RenderLoop.Run(renderForm, RenderCallback);
         }
-
         private void CheckInput()
         {
             if (Keyboard.IsKeyDown(Key.Up))
@@ -489,14 +555,12 @@ namespace VirtualCamera
                 }
             }
         }
-
         private void RenderCallback()
         {
             ClearScene();
             CheckInput();
             Draw();
         }
-
         public void Dispose()
         {
             renderForm.Dispose();
