@@ -213,7 +213,7 @@ namespace VirtualCamera
             {
                 if (Keyboard.IsKeyDown(Key.LeftShift))
                 {
-                    Matrix.RotationX(0.005f, out XAxisRotationMatrix);
+                    Matrix.RotationX(0.01f, out XAxisRotationMatrix);
                     foreach (var obj in objects)
                     {
                         obj.Position = Vector3.TransformCoordinate(obj.Position, XAxisRotationMatrix);
@@ -229,7 +229,7 @@ namespace VirtualCamera
                 }
                 else
                 {
-                    Matrix.RotationX(-0.005f, out XAxisRotationMatrix); // inicjowanie/nadpisywanie macierzy
+                    Matrix.RotationX(-0.01f, out XAxisRotationMatrix); // inicjowanie/nadpisywanie macierzy
                     foreach (var obj in objects)
                     {
                         obj.Position = Vector3.TransformCoordinate(obj.Position, XAxisRotationMatrix);
@@ -249,7 +249,7 @@ namespace VirtualCamera
             {
                 if (Keyboard.IsKeyDown(Key.LeftShift))
                 {
-                    Matrix.RotationY(-0.005f, out YAxisRotationMatrix);
+                    Matrix.RotationY(-0.01f, out YAxisRotationMatrix);
                     foreach (var obj in objects)
                     {
                         obj.Position = Vector3.TransformCoordinate(obj.Position, YAxisRotationMatrix);
@@ -265,7 +265,7 @@ namespace VirtualCamera
                 }
                 else
                 {
-                    Matrix.RotationY(0.005f, out YAxisRotationMatrix); // inicjowanie/nadpisywanie macierzy
+                    Matrix.RotationY(0.01f, out YAxisRotationMatrix); // inicjowanie/nadpisywanie macierzy
                     foreach (var obj in objects)
                     {
                         obj.Position = Vector3.TransformCoordinate(obj.Position, YAxisRotationMatrix);
@@ -285,7 +285,7 @@ namespace VirtualCamera
             {
                 if (Keyboard.IsKeyDown(Key.LeftShift))
                 {
-                    Matrix.RotationZ(-0.005f, out ZAxisRotationMatrix);
+                    Matrix.RotationZ(-0.01f, out ZAxisRotationMatrix);
                     foreach (var obj in objects)
                     {
                         obj.Position = Vector3.TransformCoordinate(obj.Position, ZAxisRotationMatrix);
@@ -301,7 +301,7 @@ namespace VirtualCamera
                 }
                 else
                 {
-                    Matrix.RotationZ(0.005f, out ZAxisRotationMatrix); // inicjowanie/nadpisywanie macierzy
+                    Matrix.RotationZ(0.01f, out ZAxisRotationMatrix); // inicjowanie/nadpisywanie macierzy
                     foreach (var obj in objects)
                     {
                         obj.Position = Vector3.TransformCoordinate(obj.Position, ZAxisRotationMatrix);
