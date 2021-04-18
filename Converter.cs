@@ -76,6 +76,88 @@ namespace VirtualCamera
             return PointInside;
         }
 
+        private static int GetPixelNearestOwner(List<Tuple<int, int>> PixelOwners, List<Object3D> objects, int pixelX, int pixelY, Camera camera)
+        {
+            int owner = 0;
+            float minZ = float.MinValue;
+            float z;
+            for (int i = 0; i < PixelOwners.Count; i++)
+            {
+                // precastX, precastY - wspolrzedne punktow w przestrzeni projekcji
+                var precastX = (pixelX - Camera.Width / 2.0f) / (Camera.Width * camera.Zoom);
+                var precastY = (Camera.Height / 2.0f - pixelY) / (Camera.Height * camera.Zoom);
+
+                float[] planeCoefficients = objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].PlaneCoefficients;
+                if (planeCoefficients[2] == 0)
+                {
+                    // pionowa plaszczyzna
+                    if (planeCoefficients[1] == 0)
+                    {
+                        int nearestWallVertexIndex = objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].GetVertex(true);
+                        int furthestWallVertexIndex = objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].GetVertex(false);
+
+                        Vector3 nearestPointCast = objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].TwoDimentionalBorders[nearestWallVertexIndex];
+                        Vector3 furthestPointCast = objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].TwoDimentionalBorders[furthestWallVertexIndex];
+                        double wholeDist = CalculatePointsDistance(new Vector2(nearestPointCast.X, nearestPointCast.Y), new Vector2(furthestPointCast.X, furthestPointCast.Y));
+
+                        float a = (furthestPointCast.Y - nearestPointCast.Y) / (furthestPointCast.X - nearestPointCast.X);
+                        float b = furthestPointCast.Y - a * nearestPointCast.X;
+                        double pixelDist = CalculatePointsDistance(new Vector2(nearestPointCast.X, nearestPointCast.Y), new Vector2(pixelX, a * pixelX + b));
+
+                        double multiplier = pixelDist / wholeDist;
+                        float substractedDist = (float)multiplier * (float)Math.Abs(objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].Vertices[nearestWallVertexIndex].Z - objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].Vertices[furthestWallVertexIndex].Z);
+                        z = objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].Vertices[nearestWallVertexIndex].Z - substractedDist;
+
+                        if (z > minZ)
+                        {
+                            minZ = z;
+                            owner = PixelOwners[i].Item1;
+                        }
+                    }
+                    // pozioma plaszczyzna
+                    else if (planeCoefficients[0] == 0)
+                    {
+                        int nearestWallVertexIndex = objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].GetVertex(true);
+                        int furthestWallVertexIndex = objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].GetVertex(false);
+
+                        Vector3 nearestPointCast = objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].TwoDimentionalBorders[nearestWallVertexIndex];
+                        Vector3 furthestPointCast = objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].TwoDimentionalBorders[furthestWallVertexIndex];
+                        double wholeDist = CalculatePointsDistance(new Vector2(nearestPointCast.X, nearestPointCast.Y), new Vector2(furthestPointCast.X, furthestPointCast.Y));
+
+                        float a = (furthestPointCast.Y - nearestPointCast.Y) / (furthestPointCast.X - nearestPointCast.X);
+                        float b = furthestPointCast.Y - a * nearestPointCast.X;
+
+                        double pixelDist = CalculatePointsDistance(new Vector2(nearestPointCast.X, nearestPointCast.Y), new Vector2((pixelY - b)/a, pixelY));
+
+                        double multiplier = pixelDist / wholeDist;
+                        float substractedDist = (float)multiplier * (float)Math.Abs(objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].Vertices[nearestWallVertexIndex].Z - objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].Vertices[furthestWallVertexIndex].Z);
+                        z = objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].Vertices[nearestWallVertexIndex].Z - substractedDist;
+
+                        if (z > minZ)
+                        {
+                            minZ = z;
+                            owner = PixelOwners[i].Item1;
+                        }
+                    }
+                    // plaszczyzna pochylona
+                    else
+                    {
+                        Console.WriteLine("Plaszczyzna pochylona; Rownanie to {0}x {1}y {2}z {3} = 0", planeCoefficients[0], planeCoefficients[1], planeCoefficients[2], planeCoefficients[3]);
+                    }
+                }
+                else
+                {
+                    z = -(planeCoefficients[3] + planeCoefficients[0] * precastX + planeCoefficients[1] * precastY) / planeCoefficients[2];
+                    if (z > minZ)
+                    {
+                        minZ = z;
+                        owner = PixelOwners[i].Item1;
+                    }
+                }
+            }
+            return owner;
+        }
+
         private static SharpDX.Color GetPixelValue(List<Object3D> objects, int pixelX, int pixelY, Camera camera)
         {
             List<Tuple<int, int>> PixelOwners = new List<Tuple<int, int>>(); // para <index obiektu, index sciany>
@@ -105,66 +187,8 @@ namespace VirtualCamera
             }
             else
             {
-                SharpDX.Color returnedColor = new SharpDX.Color(0, 0, 0, 255);
-                float minZ = float.MinValue;
-                float z;
-                for(int i = 0; i < PixelOwners.Count; i++)
-                {
-                    // precastX, precastY - wspolrzedne punktow w przestrzeni projekcji
-                    var precastX = (pixelX - Camera.Width / 2.0f) / (Camera.Width * camera.Zoom);
-                    var precastY = (Camera.Height/2.0f - pixelY) / (Camera.Height * camera.Zoom);
-
-                    float[] planeCoefficients = objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].PlaneCoefficients;
-                    if (planeCoefficients[2] == 0)
-                    {
-                        if (planeCoefficients[1] == 0) // pionowa plaszczyzna
-                        {
-                            int nearestWallVertexIndex = objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].GetVertex(true);
-                            int furthestWallVertexIndex = objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].GetVertex(false);
-
-                            Vector3 nearestPointCast = objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].TwoDimentionalBorders[nearestWallVertexIndex];
-                            Vector3 furthestPointCast = objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].TwoDimentionalBorders[furthestWallVertexIndex];
-                            double wholeDist = CalculatePointsDistance(new Vector2(nearestPointCast.X, nearestPointCast.Y), new Vector2(furthestPointCast.X, furthestPointCast.Y));
-
-                            float a = (furthestPointCast.Y - nearestPointCast.Y) / (furthestPointCast.X - nearestPointCast.X);
-                            float b = furthestPointCast.Y - a * nearestPointCast.X;
-                            double pixelDist = CalculatePointsDistance(new Vector2(nearestPointCast.X, nearestPointCast.Y), new Vector2(pixelX, a * pixelX + b));
-
-                            double multiplier = pixelDist / wholeDist;
-                            float substractedDist = (float)multiplier * (float)Math.Abs(objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].Vertices[nearestWallVertexIndex].Z - objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].Vertices[furthestWallVertexIndex].Z);
-                            z = objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].Vertices[nearestWallVertexIndex].Z - substractedDist;
-
-                            if (z > minZ)
-                            {
-                                minZ = z;
-                                returnedColor = objects[PixelOwners[i].Item1].Color;
-                            }
-                        }
-                        else if(planeCoefficients[0] == 0) // pozioma plaszczyzna
-                        {
-
-                        }
-                        //objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].
-                        //Vector3 maxZ = 
-                        //Vector3 maxZ = objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].TwoDimentionalBorders
-                        //returnedColor = new SharpDX.Color(0, 0, 255, 255);
-                        /*if (beforecastVector.Z > minZ)
-                        {
-                            minZ = beforecastVector.Z;
-                            returnedColor = objects[PixelOwners[i].Item1].Color;
-                        }*/
-                    }
-                    else
-                    {
-                        z = -(planeCoefficients[3] + planeCoefficients[0] * precastX + planeCoefficients[1] * precastY) / planeCoefficients[2];
-                        if (z > minZ)
-                        {
-                            minZ = z;
-                            returnedColor = objects[PixelOwners[i].Item1].Color;
-                        }
-                    }
-                }
-                return returnedColor;
+                int finalOwner = GetPixelNearestOwner(PixelOwners, objects, pixelX, pixelY, camera);
+                return objects[finalOwner].Color;
             }
         }
 
