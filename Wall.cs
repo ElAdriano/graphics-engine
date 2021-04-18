@@ -10,7 +10,7 @@ namespace VirtualCamera
     public class Wall
     {
         public List<Vector3> Vertices;
-        public float[] PlaneCoefficients;
+        public float[] PlaneCoefficients; // world view
 
         public List<Vector3> TwoDimentionalBorders;
 
@@ -62,6 +62,62 @@ namespace VirtualCamera
                         CastEquations.Add(new Tuple<int, float, float, float, float>(0, a, b, Math.Min(p1.X, p2.X), Math.Max(p1.X, p2.X))); // rownanie dla castu 
                     }
                 }
+            }
+        }
+
+        /*public Vector3 GetNearestCastedPoint(int pixelX, int pixelY)
+        {
+            int nearestIndex = 0;
+            double nearestDistance = (float)Math.Sqrt(Math.Pow(TwoDimentionalBorders[0].X - pixelX, 2) + Math.Pow(TwoDimentionalBorders[0].Y - pixelY, 2));
+            for(int i = 1; i < TwoDimentionalBorders.Count(); i++)
+            {
+                double tmp = (float)Math.Sqrt(Math.Pow(TwoDimentionalBorders[i].X - pixelX, 2) + Math.Pow(TwoDimentionalBorders[i].Y - pixelY, 2));
+                if (tmp < nearestDistance)
+                {
+                    nearestDistance = tmp;
+                    nearestIndex = i;
+                }
+            }
+
+            return TwoDimentionalBorders[nearestIndex];
+        }*/
+
+        public int GetVertex(bool nearest)
+        {
+            if (nearest)
+            {
+                double height = double.MaxValue;
+                for(int i = 0; i < Vertices.Count(); i++)
+                {
+                    height = Math.Min(Vertices[i].Y, height);
+                }
+
+                int result = 0;
+                for (int i = 1; i < Vertices.Count(); i++)
+                {
+                    if (Vertices[i].Z > Vertices[result].Z && Vertices[i].Y == height)
+                    {
+                        result = i;
+                    }
+                }
+                return result;
+            }
+            else
+            {
+                double height = double.MaxValue;
+                for (int i = 0; i < Vertices.Count(); i++)
+                {
+                    height = Math.Min(Vertices[i].Y, height);
+                }
+                int result = 0;
+                for (int i = 1; i < Vertices.Count(); i++)
+                {
+                    if (Vertices[i].Z < Vertices[result].Z && Vertices[i].Y == height)
+                    {
+                        result = i;
+                    }
+                }
+                return result;
             }
         }
 

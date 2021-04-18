@@ -32,7 +32,6 @@ namespace VirtualCamera
         {
             var movedPoint = Vector3.TransformCoordinate(point, transformationMatrix);
 
-            //Console.WriteLine("point = {0}, movedPoint = {1}", point.ToString(), movedPoint.ToString());
             var x = movedPoint.X * Camera.Width * camera.Zoom + Camera.Width / 2.0f;
             var y = -movedPoint.Y * Camera.Height * camera.Zoom + Camera.Height / 2.0f;
             return new Vector3(x, y, movedPoint.Z);
@@ -100,6 +99,10 @@ namespace VirtualCamera
             {
                 return new SharpDX.Color(0, 0, 0, 255); // piksel nie nalezy do zadnego rzutu
             }
+            else if (PixelOwners.Count() == 1) 
+            {
+                return objects[PixelOwners[0].Item1].Color;
+            }
             else
             {
                 SharpDX.Color returnedColor = new SharpDX.Color(0, 0, 0, 255);
@@ -107,28 +110,53 @@ namespace VirtualCamera
                 float z;
                 for(int i = 0; i < PixelOwners.Count; i++)
                 {
-                    var worldMatrix = Matrix.Translation(objects[PixelOwners[i].Item1].Position) * Matrix.RotationYawPitchRoll(objects[PixelOwners[i].Item1].Rotation.X, objects[PixelOwners[i].Item1].Rotation.Y, objects[PixelOwners[i].Item1].Rotation.Z);
-                    var viewMatrix = Matrix.LookAtLH(camera.Position, camera.Target, Vector3.UnitY);
-                    var projectionMatrix = Matrix.PerspectiveFovRH(0.78f, (float)Camera.Width / Camera.Height, 0.01f, 1.0f);
-
-                    var transformMatrix = worldMatrix * viewMatrix * projectionMatrix;
-                    transformMatrix = Matrix.Invert(transformMatrix);
-
+                    // precastX, precastY - wspolrzedne punktow w przestrzeni projekcji
                     var precastX = (pixelX - Camera.Width / 2.0f) / (Camera.Width * camera.Zoom);
                     var precastY = (Camera.Height/2.0f - pixelY) / (Camera.Height * camera.Zoom);
-                    var precastZ = objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].TwoDimentionalBorders.Find(x => { return x.X == pixelX && x.Y == pixelY; }).Z;
-
-                    var aftercastVector = new Vector3(precastX, precastY, precastZ);
-                    var beforecastVector = Vector3.TransformCoordinate(aftercastVector, transformMatrix);
 
                     float[] planeCoefficients = objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].PlaneCoefficients;
                     if (planeCoefficients[2] == 0)
                     {
-                        
+                        if (planeCoefficients[1] == 0) // pionowa plaszczyzna
+                        {
+                            int nearestWallVertexIndex = objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].GetVertex(true);
+                            int furthestWallVertexIndex = objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].GetVertex(false);
+
+                            Vector3 nearestPointCast = objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].TwoDimentionalBorders[nearestWallVertexIndex];
+                            Vector3 furthestPointCast = objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].TwoDimentionalBorders[furthestWallVertexIndex];
+                            double wholeDist = CalculatePointsDistance(new Vector2(nearestPointCast.X, nearestPointCast.Y), new Vector2(furthestPointCast.X, furthestPointCast.Y));
+
+                            float a = (furthestPointCast.Y - nearestPointCast.Y) / (furthestPointCast.X - nearestPointCast.X);
+                            float b = furthestPointCast.Y - a * nearestPointCast.X;
+                            double pixelDist = CalculatePointsDistance(new Vector2(nearestPointCast.X, nearestPointCast.Y), new Vector2(pixelX, a * pixelX + b));
+
+                            double multiplier = pixelDist / wholeDist;
+                            float substractedDist = (float)multiplier * (float)Math.Abs(objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].Vertices[nearestWallVertexIndex].Z - objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].Vertices[furthestWallVertexIndex].Z);
+                            z = objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].Vertices[nearestWallVertexIndex].Z - substractedDist;
+
+                            if (z > minZ)
+                            {
+                                minZ = z;
+                                returnedColor = objects[PixelOwners[i].Item1].Color;
+                            }
+                        }
+                        else if(planeCoefficients[0] == 0) // pozioma plaszczyzna
+                        {
+
+                        }
+                        //objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].
+                        //Vector3 maxZ = 
+                        //Vector3 maxZ = objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].TwoDimentionalBorders
+                        //returnedColor = new SharpDX.Color(0, 0, 255, 255);
+                        /*if (beforecastVector.Z > minZ)
+                        {
+                            minZ = beforecastVector.Z;
+                            returnedColor = objects[PixelOwners[i].Item1].Color;
+                        }*/
                     }
                     else
                     {
-                        z = -(planeCoefficients[3] + planeCoefficients[0] * beforecastVector.X + planeCoefficients[1] * beforecastVector.Y) / planeCoefficients[2];
+                        z = -(planeCoefficients[3] + planeCoefficients[0] * precastX + planeCoefficients[1] * precastY) / planeCoefficients[2];
                         if (z > minZ)
                         {
                             minZ = z;
@@ -239,7 +267,7 @@ namespace VirtualCamera
                         vertex2Id = wall.Vertices[i + 1].ToString();
                         if (renderedVertices.ContainsKey(vertex1Id) && renderedVertices.ContainsKey(vertex2Id))
                         {
-                            RenderLineBetweenPoints(renderedVertices[vertex1Id], renderedVertices[vertex2Id], camera, obj.Color);
+                            RenderLineBetweenPoints(renderedVertices[vertex1Id], renderedVertices[vertex2Id], camera, new SharpDX.Color(255, 255, 255, 255));
                         }
                     }
 
