@@ -80,7 +80,8 @@ namespace VirtualCamera
         {
 
             int owner = 0;
-            float minZ = float.MinValue, z = 0;
+            double minZ = double.MinValue;
+            double z = 0;
             for (int i = 0; i < PixelOwners.Count; i++)
             {
                 // precastX, precastY - wspolrzedne punktow w przestrzeni projekcji
@@ -91,7 +92,7 @@ namespace VirtualCamera
 
                 float[] planeCoefficients = objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].PlaneCoefficients;
                 if (planeCoefficients[2] == 0)
-                {
+                { 
                     // pionowa plaszczyzna
                     if (planeCoefficients[1] == 0)
                     {
@@ -177,13 +178,15 @@ namespace VirtualCamera
                         distances.Add(distance);
                     }
 
-                    float weightSum = 0;
+                    double weightSum = 0;
                     for (int vertexCastId = 0; vertexCastId < distances.Count(); vertexCastId++)
                     {
-                        z += (float)(1 / distances[vertexCastId]) * objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].Vertices[vertexCastId].Z;
-                        weightSum += (float)(1 / distances[vertexCastId]);
+                        z += (double)(1 / distances[vertexCastId]) * objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].Vertices[vertexCastId].Z;
+                        weightSum += (double)(1 / distances[vertexCastId]);
                     }
                     z /= weightSum;
+
+                   // Console.WriteLine("Z wynosi:{0}", z);
                     //z = -(planeCoefficients[3] + planeCoefficients[0] * precastX + planeCoefficients[1] * precastY) / planeCoefficients[2];
                     if (z > minZ)
                     {
