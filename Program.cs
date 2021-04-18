@@ -24,7 +24,7 @@ namespace VirtualCamera
 
         static void LoadObjects(Camera camera)
         {
-            using (StreamReader reader = new StreamReader("../../objects.json"))
+            using (StreamReader reader = new StreamReader("../../wredny.json"))
             {
                 string jsonContent = reader.ReadToEnd();
                 ObjectJsonFileStructure parsedContent = JsonConvert.DeserializeObject<ObjectJsonFileStructure>(jsonContent);

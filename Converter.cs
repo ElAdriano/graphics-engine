@@ -78,14 +78,16 @@ namespace VirtualCamera
 
         private static int GetPixelNearestOwner(List<Tuple<int, int>> PixelOwners, List<Object3D> objects, int pixelX, int pixelY, Camera camera)
         {
+
             int owner = 0;
-            float minZ = float.MinValue;
-            float z;
+            float minZ = float.MinValue, z = 0;
             for (int i = 0; i < PixelOwners.Count; i++)
             {
                 // precastX, precastY - wspolrzedne punktow w przestrzeni projekcji
                 var precastX = (pixelX - Camera.Width / 2.0f) / (Camera.Width * camera.Zoom);
                 var precastY = (Camera.Height / 2.0f - pixelY) / (Camera.Height * camera.Zoom);
+                
+            
 
                 float[] planeCoefficients = objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].PlaneCoefficients;
                 if (planeCoefficients[2] == 0)
@@ -142,12 +144,47 @@ namespace VirtualCamera
                     // plaszczyzna pochylona
                     else
                     {
-                        Console.WriteLine("Plaszczyzna pochylona; Rownanie to {0}x {1}y {2}z {3} = 0", planeCoefficients[0], planeCoefficients[1], planeCoefficients[2], planeCoefficients[3]);
+                        List<double> distances = new List<double>();
+
+                        for (int vertexCastId = 0; vertexCastId < objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].TwoDimentionalBorders.Count(); vertexCastId++)
+                        {
+                            double distance = CalculatePointsDistance(new Vector2(pixelX, pixelY), new Vector2(objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].TwoDimentionalBorders[vertexCastId].X, objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].TwoDimentionalBorders[vertexCastId].Y));
+                            distances.Add(distance);
+                        }
+
+                        float weightSum = 0;
+                        for (int vertexCastId = 0; vertexCastId < distances.Count(); vertexCastId++)
+                        {
+                            z += (float)(1 / distances[vertexCastId]) * objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].Vertices[vertexCastId].Z;
+                            weightSum += (float)(1 / distances[vertexCastId]);
+                        }
+                        z /= weightSum;
+                        if (z > minZ)
+                        {
+                            minZ = z;
+                            owner = PixelOwners[i].Item1;
+                        }
+                        // Console.WriteLine("Plaszczyzna pochylona; Rownanie to {0}x {1}y {2}z {3} = 0", planeCoefficients[0], planeCoefficients[1], planeCoefficients[2], planeCoefficients[3]);
                     }
                 }
                 else
                 {
-                    z = -(planeCoefficients[3] + planeCoefficients[0] * precastX + planeCoefficients[1] * precastY) / planeCoefficients[2];
+                    List<double> distances = new List<double>();
+
+                    for (int vertexCastId = 0; vertexCastId < objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].TwoDimentionalBorders.Count(); vertexCastId++)
+                    {
+                        double distance = CalculatePointsDistance(new Vector2(pixelX, pixelY), new Vector2(objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].TwoDimentionalBorders[vertexCastId].X, objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].TwoDimentionalBorders[vertexCastId].Y));
+                        distances.Add(distance);
+                    }
+
+                    float weightSum = 0;
+                    for (int vertexCastId = 0; vertexCastId < distances.Count(); vertexCastId++)
+                    {
+                        z += (float)(1 / distances[vertexCastId]) * objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].Vertices[vertexCastId].Z;
+                        weightSum += (float)(1 / distances[vertexCastId]);
+                    }
+                    z /= weightSum;
+                    //z = -(planeCoefficients[3] + planeCoefficients[0] * precastX + planeCoefficients[1] * precastY) / planeCoefficients[2];
                     if (z > minZ)
                     {
                         minZ = z;
