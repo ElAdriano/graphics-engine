@@ -332,7 +332,7 @@ namespace VirtualCamera
                     wall.FindCast2DEquations();
                 }
 
-                string vertex1Id, vertex2Id;
+                /*string vertex1Id, vertex2Id;
                 foreach (Wall wall in obj.Walls)
                 {
                     for (int i = 0; i < wall.Vertices.Count - 1; i++)
@@ -351,7 +351,7 @@ namespace VirtualCamera
                     {
                         RenderLineBetweenPoints(renderedVertices[vertex1Id], renderedVertices[vertex2Id], camera, obj.Color);
                     }
-                }
+                }*/
             }
 
             for (int pixelY = 0; pixelY < Camera.Height; pixelY++)
