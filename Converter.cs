@@ -88,8 +88,6 @@ namespace VirtualCamera
                 var precastX = (pixelX - Camera.Width / 2.0f) / (Camera.Width * camera.Zoom);
                 var precastY = (Camera.Height / 2.0f - pixelY) / (Camera.Height * camera.Zoom);
                 
-            
-
                 float[] planeCoefficients = objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].PlaneCoefficients;
                 if (planeCoefficients[2] == 0)
                 { 
@@ -161,8 +159,8 @@ namespace VirtualCamera
                         double weightSum = 0;
                         for (int vertexCastId = 0; vertexCastId < distances.Count(); vertexCastId++)
                         {
-                            z += (double)(1 / distances[vertexCastId]) * objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].Vertices[vertexCastId].Z;
-                            weightSum += (double)(1 / distances[vertexCastId]);
+                            z += (double)Math.Pow((1 / distances[vertexCastId]), 2) * objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].Vertices[vertexCastId].Z;
+                            weightSum += (double)Math.Pow((1 / distances[vertexCastId]), 2);
                         }
                         z /= weightSum;
 
@@ -193,8 +191,8 @@ namespace VirtualCamera
                     double weightSum = 0;
                     for (int vertexCastId = 0; vertexCastId < distances.Count(); vertexCastId++)
                     {
-                        z += (double)(1 / distances[vertexCastId]) * objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].Vertices[vertexCastId].Z;
-                        weightSum += (double)(1 / distances[vertexCastId]);
+                        z += (double)Math.Pow((1 / distances[vertexCastId]), 2) * objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].Vertices[vertexCastId].Z;
+                        weightSum += (double)Math.Pow((1 / distances[vertexCastId]), 2);
                     }
                     z /= weightSum;
 
