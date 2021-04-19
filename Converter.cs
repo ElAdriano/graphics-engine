@@ -175,29 +175,7 @@ namespace VirtualCamera
                 }
                 else
                 {
-                    List<double> distances = new List<double>();
-
-                    for (int vertexCastId = 0; vertexCastId < objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].TwoDimentionalBorders.Count(); vertexCastId++)
-                    {
-                        var precastVertexX = (objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].TwoDimentionalBorders[vertexCastId].X - Camera.Width / 2.0f) / (Camera.Width * camera.Zoom);
-                        var precastVertexY = (Camera.Height / 2.0f - objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].TwoDimentionalBorders[vertexCastId].Y) / (Camera.Height * camera.Zoom);
-                        double distance = CalculatePointsDistance(
-                            new Vector2(precastX, precastY), 
-                            new Vector2(precastVertexX, precastVertexY)
-                        );
-                        distances.Add(distance);
-                    }
-
-                    double weightSum = 0;
-                    for (int vertexCastId = 0; vertexCastId < distances.Count(); vertexCastId++)
-                    {
-                        z += (double)Math.Pow((1 / distances[vertexCastId]), 2) * objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].Vertices[vertexCastId].Z;
-                        weightSum += (double)Math.Pow((1 / distances[vertexCastId]), 2);
-                    }
-                    z /= weightSum;
-
-                    // Console.WriteLine("Z wynosi:{0}", z);
-                    //z = -(planeCoefficients[3] + planeCoefficients[0] * precastX + planeCoefficients[1] * precastY) / planeCoefficients[2];
+                    z = -(planeCoefficients[3] + planeCoefficients[0] * precastX + planeCoefficients[1] * precastY) / planeCoefficients[2];
                     if (z > minZ)
                     {
                         minZ = z;
