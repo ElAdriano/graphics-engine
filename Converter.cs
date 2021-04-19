@@ -143,7 +143,7 @@ namespace VirtualCamera
                     // plaszczyzna pochylona
                     else
                     {
-                        List<double> distances = new List<double>();
+                        /*List<double> distances = new List<double>();
 
                         for (int vertexCastId = 0; vertexCastId < objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].TwoDimentionalBorders.Count(); vertexCastId++)
                         {
@@ -162,10 +162,10 @@ namespace VirtualCamera
                             z += (double)Math.Pow((1 / distances[vertexCastId]), 2) * objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].Vertices[vertexCastId].Z;
                             weightSum += (double)Math.Pow((1 / distances[vertexCastId]), 2);
                         }
-                        z /= weightSum;
+                        z /= weightSum;*/
 
                         // Console.WriteLine("Z wynosi:{0}", z);
-                        //z = -(planeCoefficients[3] + planeCoefficients[0] * precastX + planeCoefficients[1] * precastY) / planeCoefficients[2];
+                        z = -(planeCoefficients[3] + planeCoefficients[0] * precastX + planeCoefficients[1] * precastY) / planeCoefficients[2];
                         if (z > minZ)
                         {
                             minZ = z;
