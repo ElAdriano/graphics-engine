@@ -5,6 +5,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+using System.Threading;
+
+
 namespace VirtualCamera
 {
     public class Converter
@@ -42,6 +45,7 @@ namespace VirtualCamera
             return Math.Sqrt(Math.Pow(point2.X - point1.X, 2) + Math.Pow(point2.Y - point1.Y, 2));
         }
 
+        // to sie może przydać
         private static void RenderLineBetweenPoints(Vector2 point0, Vector2 point1, Camera camera, SharpDX.Color color)
         {
             Vector2 points2dVector = (point1 - point0) / 100;
@@ -143,28 +147,6 @@ namespace VirtualCamera
                     // plaszczyzna pochylona
                     else
                     {
-                        /*List<double> distances = new List<double>();
-
-                        for (int vertexCastId = 0; vertexCastId < objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].TwoDimentionalBorders.Count(); vertexCastId++)
-                        {
-                            var precastVertexX = (objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].TwoDimentionalBorders[vertexCastId].X - Camera.Width / 2.0f) / (Camera.Width * camera.Zoom);
-                            var precastVertexY = (Camera.Height / 2.0f - objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].TwoDimentionalBorders[vertexCastId].Y) / (Camera.Height * camera.Zoom);
-                            double distance = CalculatePointsDistance(
-                                new Vector2(precastX, precastY),
-                                new Vector2(precastVertexX, precastVertexY)
-                            );
-                            distances.Add(distance);
-                        }
-
-                        double weightSum = 0;
-                        for (int vertexCastId = 0; vertexCastId < distances.Count(); vertexCastId++)
-                        {
-                            z += (double)Math.Pow((1 / distances[vertexCastId]), 2) * objects[PixelOwners[i].Item1].Walls[PixelOwners[i].Item2].Vertices[vertexCastId].Z;
-                            weightSum += (double)Math.Pow((1 / distances[vertexCastId]), 2);
-                        }
-                        z /= weightSum;*/
-
-                        // Console.WriteLine("Z wynosi:{0}", z);
                         z = -(planeCoefficients[3] + planeCoefficients[0] * precastX + planeCoefficients[1] * precastY) / planeCoefficients[2];
                         if (z > minZ)
                         {
@@ -329,27 +311,6 @@ namespace VirtualCamera
                     }
                     wall.FindCast2DEquations();
                 }
-
-                /*string vertex1Id, vertex2Id;
-                foreach (Wall wall in obj.Walls)
-                {
-                    for (int i = 0; i < wall.Vertices.Count - 1; i++)
-                    {
-                        vertex1Id = wall.Vertices[i].ToString();
-                        vertex2Id = wall.Vertices[i + 1].ToString();
-                        if (renderedVertices.ContainsKey(vertex1Id) && renderedVertices.ContainsKey(vertex2Id))
-                        {
-                            RenderLineBetweenPoints(renderedVertices[vertex1Id], renderedVertices[vertex2Id], camera, new SharpDX.Color(255, 255, 255, 255));
-                        }
-                    }
-
-                    vertex1Id = wall.Vertices[wall.Vertices.Count - 1].ToString();
-                    vertex2Id = wall.Vertices[0].ToString();
-                    if (renderedVertices.ContainsKey(vertex1Id) && renderedVertices.ContainsKey(vertex2Id))
-                    {
-                        RenderLineBetweenPoints(renderedVertices[vertex1Id], renderedVertices[vertex2Id], camera, obj.Color);
-                    }
-                }*/
             }
 
             for (int pixelY = 0; pixelY < Camera.Height; pixelY++)
